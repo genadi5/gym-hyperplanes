@@ -3,7 +3,8 @@ import numpy as np
 from keras.layers import Dense, Activation, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
-from rl.agents.dqn import DQNAgent
+# from rl.agents.dqn import DQNAgent
+from gym_hyperplanes.dqn import DQNAgent
 from rl.memory import SequentialMemory
 from rl.policy import BoltzmannQPolicy
 
@@ -16,28 +17,32 @@ env.configure(3,4)
 
 HPs = 2
 angles = 4
-nb_actions = env.action_space.n
-space_shape = env.observation_space.shape
+nb_actions = env.actions_number
+# space_shape = env.observation_space.shape
 # nb_actions = 4
 # space_shape = 100
 
 # Next, we build a very simple model.
 model = Sequential()
-model.add(Flatten(input_shape=(1,) + (1, len(env.observation_space))))
-model.add(Dense(16))
-model.add(Activation('relu'))
-model.add(Dense(16))
-model.add(Activation('relu'))
+model.add(Flatten(input_shape=(1,) + env.state.shape))
 model.add(Dense(16))
 model.add(Activation('relu'))
 model.add(Dense(nb_actions))
 model.add(Activation('linear'))
+# model = Sequential()
+state_shape = self.env.observation_space.shape
+# model.add(Dense(24, input_dim=env.state.shape[0], activation="relu"))
+# model.add(Dense(48, activation="relu"))
+# model.add(Dense(24, activation="relu"))
+# model.add(Dense(nb_actions))
+# model.compile(loss="mean_squared_error", optimizer=Adam(lr=1e-3))
 print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
 memory = SequentialMemory(limit=50000, window_length=1)
 policy = BoltzmannQPolicy()
+# policy = EpsGreedyQPolicy()
 dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
                target_model_update=1e-2, policy=policy)
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
