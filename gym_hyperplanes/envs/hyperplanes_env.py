@@ -5,7 +5,6 @@ from gym_hyperplanes.states.state_calc import StateCalculator
 
 UP = 1
 DOWN = -1
-FULL_CIRCLE = 360
 START_CIRCLE = 0
 
 
@@ -14,14 +13,14 @@ class HyperPlanesEnv(gym.Env):
 
     def __init__(self):
         '''
-        If we have X features then for each hyper plane we have ((X - 1) + 1) * 2 actions we van take
-        (X - 1) - for angles on each dimension/features - 1 of hyperplane plus 1 for to/from origin
+        If we have X features then for each hyper plane we have (X + 1) * 2 actions we van take
+        X + 1 - for X angles on each dimension/features plus 1 for to/from origin
         * 2 since it can be done in two directions (per action)
         '''
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
         self.features = 2  # 3 actions per player, two player: 3 * 3 * 2
         self.hyperplanes = 2
-        self.hyperplane_params_dimension = self.features
+        self.hyperplane_params_dimension = self.features + 1
         self.actions_number = self.hyperplanes * self.hyperplane_params_dimension * 2
         self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
 
@@ -50,8 +49,12 @@ class HyperPlanesEnv(gym.Env):
                 self.state[action_index] -= \
                     (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
         else:
-            self.state[action_index] = (self.state[action_index] + action_direction * self.angle_delta) % FULL_CIRCLE
-        return self.state, self.state_calc.calculate_reward(self.state), self.state_calc.is_done(self.state), {}
+            result = self.state_calc.apply(self.state, action_index, action_direction, self.angle_delta,
+                                           self.hyperplane_params_dimension)
+            if result is not None:
+                self.state[action_index] = result
+        reward = self.state_calc.calculate_reward(self.state)
+        return self.state, reward, reward == 0, {}
 
     def reset(self):
         self.state = np.zeros(self.hyperplane_params_dimension * self.hyperplanes)
