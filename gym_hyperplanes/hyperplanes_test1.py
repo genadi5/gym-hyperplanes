@@ -79,17 +79,24 @@ def main():
     gamma = 0.9
     epsilon = .95
 
-    trials = 100
-    trial_len = 500
+    trials = 10
+    trial_len = 10000
 
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
     steps = []
     for trial in range(trials):
+        print('starting trail {}'.format(trial))
         cur_state = env.reset().reshape(1, env.get_state_shape()[0])
+        best_reward = None
+        worst_reward = None
         for step in range(trial_len):
             action = dqn_agent.act(cur_state)
             new_state, reward, done, _ = env.step(action)
+            if best_reward is None or best_reward < reward:
+                best_reward = reward
+            if worst_reward is None or worst_reward > reward:
+                worst_reward = reward
 
             # reward = reward if not done else -20
             new_state = new_state.reshape(1, env.get_state_shape()[0])
@@ -101,6 +108,8 @@ def main():
             cur_state = new_state
             if done:
                 break
+
+        print("rewards: best {}, worst {}".format(best_reward, worst_reward))
         if step >= 199:
             print("Failed to complete in trial {}".format(trial))
             if step % 10 == 0:

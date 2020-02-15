@@ -10,28 +10,31 @@ FULL_CIRCLE = 360
 
 class StateManipulator:
     def __init__(self):
-        '''
+        """
         If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take
         X + 1 - for X angles on each dimension/features plus 1 for to/from origin
         * 2 since it can be done in two directions (per action)
-        '''
+        """
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
         self.features = 2
         self.hyperplanes = 2
         self.angle_delta = 45
 
-        self.hyperplane_params_dimension = self.features + 1
-        self.actions_number = self.hyperplanes * self.hyperplane_params_dimension * 2
+        self.hyperplane_params_dimension = self.features + 1  # for translation
+        self.actions_number = self.hyperplanes * self.hyperplane_params_dimension * 2  # for 2 directions
         self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
 
         self.max_distance_from_origin = 100  # calculate
-        self.distance_from_origin_delta_percents = 1
+        self.distance_from_origin_delta_percents = 5
 
         self.state = np.zeros(self.states_dimension)
 
+        # example of input data
         self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [80, 80], [70, 10], [90, 10]]
-        self.c = [1, 1, 2, 2, 1, 1, 2, 2]
+        # and its classification
+        self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
 
+        # maps of cosines and their squares
         self.cos = dict()
         self.cossqr = dict()
         for i in range(0, 360, 45):
@@ -43,27 +46,30 @@ class StateManipulator:
         return self.state
 
     def calculate_reward(self):
-        features = 2
         areas = dict()
-        for i in range(0, int(len(self.state) / features)):  # 2 - two features
+        for i in range(0, self.hyperplanes):  #
             h = str(i)
-            for ind in range(0, len(self.c)):
+            hp_features_ind = self.get_hyperplane_features_index(i)
+            for ind in range(0, len(self.labels)):
                 point = self.xy[ind]
-                anglesValSum = 0  # all cosinuses should sum in one
+                anglesValSum = 0  # all cosines should sum in one
                 calc = 0
-                for j in range(0, features - 1):
-                    cos = self.cos[self.state[i * features + j]]
+                for j in range(0, self.features):
+                    cos = self.cos[self.state[hp_features_ind + j]]
                     anglesValSum += cos
                     calc += point[j] * cos
                 cos = 1 - anglesValSum
-                calc += point[features - 1] * cos
-                side = "-" + h if calc < self.state[i * features + features - 1] else "+" + h
+                calc += point[self.features - 1] * cos
+                side = "-" + h if calc < self.state[self.get_hyperplane_translation_index(i)] else "+" + h
                 cls = set() if side not in areas else areas[side]
-                cls.add(self.c[ind])
+                # we add all classes we found in the area
+                cls.add(self.labels[ind])
+                areas[side] = cls
 
         count = 0
         for key, value in areas.items():
             if len(value) > 1:
+                # each time some area has mor than 1 class we have mis-classification
                 count -= 1
         return count
 
@@ -74,19 +80,13 @@ class StateManipulator:
         if self.is_hyperplane_translation(action_index):
             self.apply_translation(action_index, action_direction)
         else:
-            result = self.apply_rotation(self.state, action_index, action_direction)
-            if result is not None:
-                self.state[action_index] = result
+            self.apply_rotation(self.state, action_index, action_direction)
 
     def apply_translation(self, action_index, action_direction):
         if action_direction == UP and self.state[action_index] < self.max_distance_from_origin:
-            k = self.state[action_index] + \
-                (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
             self.state[action_index] += \
                 (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
         if action_direction == DOWN and 0 < self.state[action_index]:
-            k = self.state[action_index] - \
-                (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
             self.state[action_index] -= \
                 (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
 
@@ -97,10 +97,17 @@ class StateManipulator:
         for i in range(hyperplane_start, hyperplane_start + self.hyperplane_params_dimension - 1):
             result += self.cossqr[state[i]] if i != action_index \
                 else self.cossqr[(state[i] + action_direction * self.angle_delta) % FULL_CIRCLE]
-        return None if result > 1 else 0
+        if result <= 1:
+            state[i] += action_direction * self.angle_delta
 
     def is_hyperplane_translation(self, action_index):
         return (action_index + 1) % self.hyperplane_params_dimension == 0
+
+    def get_hyperplane_features_index(self, hyperplane_number):
+        return hyperplane_number * (self.features + 1)
+
+    def get_hyperplane_translation_index(self, hyperplane_number):
+        return hyperplane_number * (self.features + 1) + self.features
 
     def get_hyperplane_index(self, action):
         return action % self.hyperplane_params_dimension
