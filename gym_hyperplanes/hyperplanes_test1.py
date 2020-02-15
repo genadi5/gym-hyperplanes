@@ -1,3 +1,4 @@
+import datetime
 import random
 from collections import deque
 
@@ -86,6 +87,7 @@ def main():
     dqn_agent = DQN(env=env)
     steps = []
     for trial in range(trials):
+        start = datetime.datetime.now()
         print('starting trail {}'.format(trial))
         cur_state = env.reset().reshape(1, env.get_state_shape()[0])
         best_reward = None
@@ -109,7 +111,8 @@ def main():
             if done:
                 break
 
-        print("rewards: best {}, worst {}".format(best_reward, worst_reward))
+        stop = datetime.datetime.now()
+        print("rewards: best {}, worst {} in {}".format(best_reward, worst_reward, (stop - start)))
         if step >= 199:
             print("Failed to complete in trial {}".format(trial))
             if step % 10 == 0:
