@@ -25,11 +25,11 @@ class DQN:
 
     def create_model(self):
         model = Sequential()
-        state_shape = self.env.state.shape
+        state_shape = self.env.get_state_shape()
         model.add(Dense(24, input_dim=state_shape[0], activation="relu"))
         model.add(Dense(48, activation="relu"))
         model.add(Dense(24, activation="relu"))
-        model.add(Dense(self.env.actions_number))
+        model.add(Dense(self.env.get_actions_number()))
         model.compile(loss="mean_squared_error",
                       optimizer=Adam(lr=self.learning_rate))
         return model
@@ -75,6 +75,7 @@ def main():
     np.random.seed(123)
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
+    env.set_state_manipulator()
     gamma = 0.9
     epsilon = .95
 
@@ -85,13 +86,13 @@ def main():
     dqn_agent = DQN(env=env)
     steps = []
     for trial in range(trials):
-        cur_state = env.reset().reshape(1, env.state.shape[0])
+        cur_state = env.reset().reshape(1, env.get_state_shape()[0])
         for step in range(trial_len):
             action = dqn_agent.act(cur_state)
             new_state, reward, done, _ = env.step(action)
 
             # reward = reward if not done else -20
-            new_state = new_state.reshape(1, env.state.shape[0])
+            new_state = new_state.reshape(1, env.get_state_shape()[0])
             dqn_agent.remember(cur_state, action, reward, new_state, done)
 
             dqn_agent.replay()  # internally iterates default (prediction) model

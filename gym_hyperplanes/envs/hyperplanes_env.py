@@ -1,64 +1,30 @@
 import gym
-import numpy as np
 
-from gym_hyperplanes.states.state_calc import StateCalculator
-
-UP = 1
-DOWN = -1
-START_CIRCLE = 0
+from gym_hyperplanes.states.state_calc import StateManipulator
 
 
 class HyperPlanesEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
-        '''
-        If we have X features then for each hyper plane we have (X + 1) * 2 actions we van take
-        X + 1 - for X angles on each dimension/features plus 1 for to/from origin
-        * 2 since it can be done in two directions (per action)
-        '''
-        # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
-        self.features = 2  # 3 actions per player, two player: 3 * 3 * 2
-        self.hyperplanes = 2
-        self.hyperplane_params_dimension = self.features + 1
-        self.actions_number = self.hyperplanes * self.hyperplane_params_dimension * 2
-        self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
+        self.state_manipulator = None
 
-        self.max_distance_from_origin = 100  # calculate
-        self.distance_from_origin_delta_percents = 1
+    def set_state_manipulator(self, state_manipulator=None):
+        self.state_manipulator = state_manipulator if state_manipulator is not None else StateManipulator()
 
-        self.angle_delta = 45
+    def get_state_shape(self):
+        return self.state_manipulator.get_state().shape
 
-        self.state = np.zeros(self.states_dimension)
-
-        self.state_calc = StateCalculator()
+    def get_actions_number(self):
+        return self.state_manipulator.actions_number
 
     def step(self, action):
-        action_index = int(action / 2)
-        action_direction = UP if action % 2 == 0 else DOWN
-
-        if self.is_hyperplane_translation(action_index):
-            if action_direction == UP and self.state[action_index] < self.max_distance_from_origin:
-                k = self.state[action_index] + \
-                    (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
-                self.state[action_index] += \
-                    (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
-            if action_direction == DOWN and 0 < self.state[action_index]:
-                k = self.state[action_index] - \
-                    (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
-                self.state[action_index] -= \
-                    (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
-        else:
-            result = self.state_calc.apply(self.state, action_index, action_direction, self.angle_delta,
-                                           self.hyperplane_params_dimension)
-            if result is not None:
-                self.state[action_index] = result
-        reward = self.state_calc.calculate_reward(self.state)
-        return self.state, reward, reward == 0, {}
+        self.state_manipulator.apply_action(action)
+        reward = self.state_manipulator.calculate_reward()
+        return self.state_manipulator.get_state(), reward, reward == 0, {}
 
     def reset(self):
-        self.state = np.zeros(self.hyperplane_params_dimension * self.hyperplanes)
-        return self.state
+        return self.state_manipulator.reset()
 
     def render(self, mode='human'):
         pass
@@ -67,16 +33,7 @@ class HyperPlanesEnv(gym.Env):
         pass
 
     def sample(self):
-        return np.random.randint(0, self.actions_number - 1)
+        return self.state_manipulator.sample()
 
     def configure(self, key, value):
         pass
-
-    def get_hyperplane_index(self, action):
-        return action % self.hyperplane_params_dimension
-
-    def get_hyperplane_parameter_index(self, action):
-        return action / self.hyperplane_params_dimension
-
-    def is_hyperplane_translation(self, action_index):
-        return (action_index + 1) % self.hyperplane_params_dimension == 0
