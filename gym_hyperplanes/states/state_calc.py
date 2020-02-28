@@ -90,19 +90,19 @@ class StateManipulator:
     def apply_rotation(self, action_index, action_direction):
         new_cos = math.cos(
             math.acos(self.state[action_index] + action_direction * math.pi / self.pi_fraction) % math.pi)
-        to_remove = pow(new_cos, 2) - pow(self.state[action_index], 2)  # we need to add/remove this from the 1
-        direction = 1 if to_remove > 0 else -1
+        to_remove = pow(self.state[action_index], 2) - pow(new_cos, 2)  # we need to add/remove this from the 1
+        compensate_direction = 1 if to_remove > 0 else -1
         to_remove = abs(to_remove)
 
         hyperplane_index = self.get_hyperplane_index(action_index)
         hyperplane_features_index = self.get_hyperplane_features_index(hyperplane_index)
 
-        compensate_features = self.features - 1
+        compensate_features = self.features - 1  # angle for one feature changed, others should compensate for 1
         compensate_delta = math.sqrt(to_remove / compensate_features)
-        while to_remove > 0:
+        while (to_remove > 0) and (compensate_features > 0):
             for i in range(hyperplane_features_index, hyperplane_features_index + self.hyperplane_params_dimension - 1):
                 if i != action_index:
-                    compensated = self.compensate_other_angles(i, direction, compensate_delta)
+                    compensated = self.compensate_other_angles(i, compensate_direction, compensate_delta)
                     if compensated != compensate_delta:
                         compensate_features -= 1
                     to_remove -= compensated
@@ -112,12 +112,12 @@ class StateManipulator:
                 compensate_delta = math.sqrt(to_remove / compensate_features)
         sum_direction_cosines = self.calc_sqr_cos_sum(hyperplane_index)
         if abs(1 - sum_direction_cosines) > 1.001:
-            raise "Got sum of direction cosines {} for states {}".format(sum_direction_cosines, self.state)
+            raise "Got sum of compensate_direction cosines {} for states {}".format(sum_direction_cosines, self.state)
 
-    def compensate_other_angles(self, action_index, direction, compensate_delta):
+    def compensate_other_angles(self, action_index, compensate_direction, compensate_delta):
         compensated = compensate_delta
         if self.state[action_index] > 0:
-            if direction > 0:
+            if compensate_direction > 0:
                 self.state[action_index] += compensate_delta
                 if self.state[action_index] > 1:
                     compensated = compensate_delta - (self.state[action_index] - 1)
@@ -127,8 +127,8 @@ class StateManipulator:
                 if self.state[action_index] < 0:
                     compensated = compensate_delta - (0 - self.state[action_index])
                     self.state[action_index] = 0
-        if self.state[action_index] < 0:
-            if direction > 0:
+        else:
+            if compensate_direction > 0:
                 self.state[action_index] -= compensate_delta
                 if self.state[action_index] < -1:
                     compensated = compensate_delta - (-1 - self.state[action_index])
@@ -148,7 +148,7 @@ class StateManipulator:
         return hyperplane_number * (self.features + 1) + self.features
 
     def get_hyperplane_index(self, action):
-        return action / self.hyperplane_params_dimension
+        return int(action / self.hyperplane_params_dimension)
 
     def get_hyperplane_parameter_index(self, action):
         return action % self.hyperplane_params_dimension
