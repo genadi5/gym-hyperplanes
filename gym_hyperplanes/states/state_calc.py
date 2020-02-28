@@ -89,7 +89,7 @@ class StateManipulator:
 
     def apply_rotation(self, action_index, action_direction):
         new_cos = math.cos(
-            math.acos(self.state[action_index] + action_direction * math.pi / self.pi_fraction) % math.pi)
+            (math.acos(self.state[action_index]) + action_direction * math.pi / self.pi_fraction) % math.pi)
         to_remove = pow(self.state[action_index], 2) - pow(new_cos, 2)  # we need to add/remove this from the 1
         compensate_direction = 1 if to_remove > 0 else -1
         to_remove = abs(to_remove)
@@ -137,13 +137,13 @@ class StateManipulator:
                     compensated = compensate_delta - (-1 - res)
                     self.state[action_index] = 1  # hyperplane switched
                 else:
-                    self.state[action_index] = math.sqrt(res)
+                    self.state[action_index] = -math.sqrt(abs(res))
             else:
                 if res > 0:
                     compensated = compensate_delta - res
                     self.state[action_index] = 0
                 else:
-                    self.state[action_index] = math.sqrt(res)
+                    self.state[action_index] = -math.sqrt(abs(res))
         return compensated
 
     def get_hyperplane_features_index(self, hyperplane_number):
