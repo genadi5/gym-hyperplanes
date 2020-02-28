@@ -98,7 +98,7 @@ class StateManipulator:
         hyperplane_features_index = self.get_hyperplane_features_index(hyperplane_index)
 
         compensate_features = self.features - 1  # angle for one feature changed, others should compensate for 1
-        compensate_delta = math.sqrt(to_remove / compensate_features)
+        compensate_delta = to_remove / compensate_features
         while (to_remove > 0) and (compensate_features > 0):
             for i in range(hyperplane_features_index, hyperplane_features_index + self.hyperplane_params_dimension - 1):
                 if i != action_index:
@@ -117,28 +117,33 @@ class StateManipulator:
     def compensate_other_angles(self, action_index, compensate_direction, compensate_delta):
         compensated = compensate_delta
         if self.state[action_index] > 0:
+            res = pow(self.state[action_index], 2) + compensate_direction * compensate_delta
             if compensate_direction > 0:
-                self.state[action_index] += compensate_delta
-                if self.state[action_index] > 1:
-                    compensated = compensate_delta - (self.state[action_index] - 1)
+                if res > 1:
+                    compensated = compensate_delta - (res - 1)
                     self.state[action_index] = 1
+                else:
+                    self.state[action_index] = math.sqrt(res)
             else:
-                self.state[action_index] -= compensate_delta
-                if self.state[action_index] < 0:
-                    compensated = compensate_delta - (0 - self.state[action_index])
+                if res < 0:
+                    compensated = compensate_delta - (0 - res)
                     self.state[action_index] = 0
+                else:
+                    self.state[action_index] = math.sqrt(res)
         else:
+            res = pow(self.state[action_index], 2) - compensate_direction * compensate_delta
             if compensate_direction > 0:
-                self.state[action_index] -= compensate_delta
-                if self.state[action_index] < -1:
-                    compensated = compensate_delta - (-1 - self.state[action_index])
+                if res < -1:
+                    compensated = compensate_delta - (-1 - res)
                     self.state[action_index] = 1  # hyperplane switched
+                else:
+                    self.state[action_index] = math.sqrt(res)
             else:
-                self.state[action_index] += compensate_delta
-                if self.state[action_index] > 0:
-                    compensated = compensate_delta - self.state[action_index]
+                if res > 0:
+                    compensated = compensate_delta - res
                     self.state[action_index] = 0
-
+                else:
+                    self.state[action_index] = math.sqrt(res)
         return compensated
 
     def get_hyperplane_features_index(self, hyperplane_number):
