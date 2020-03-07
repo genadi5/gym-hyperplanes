@@ -4,7 +4,7 @@ import numpy as np
 
 UP = 1
 DOWN = -1
-
+np.random.seed(123)
 
 class StateManipulator:
     def __init__(self):
@@ -18,7 +18,7 @@ class StateManipulator:
 
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
         self.features = 2
-        self.hyperplanes = 1
+        self.hyperplanes = 2
 
         # how much we increase selected angle (to selected dimension)
         self.pi_fraction = 4  # pi / self.pi_fraction
@@ -35,16 +35,16 @@ class StateManipulator:
         self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
 
         self.max_distance_from_origin = 100  # calculate - actually we should be able to move from - to +
-        self.distance_from_origin_delta_percents = 25
+        self.distance_from_origin_delta_percents = 5
 
         self.state = np.zeros(self.states_dimension)
 
         # example of input data
-        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
         self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
+        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
         # and its classification
-        # self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
-        self.labels = [1, 1, 1, 1, 2, 2, 2, 2]
+        self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
+        # self.labels = [1, 1, 1, 1, 2, 2, 2, 2]
 
     def get_state(self):
         return self.state
@@ -60,17 +60,25 @@ class StateManipulator:
                 for j in range(0, self.features):
                     calc += point[j] * self.state[hp_features_ind + j]
                 side = "-" + h if calc < self.state[self.get_hyperplane_translation_index(i)] else "+" + h
-                cls = set() if side not in areas else areas[side]
+                cls = dict() if side not in areas else areas[side]
                 # we add all classes we found in the area
-                cls.add(self.labels[ind])
+                if self.labels[ind] in cls:
+                    cls[self.labels[ind]] = cls[self.labels[ind]] + 1
+                else:
+                    cls[self.labels[ind]] = 1
                 areas[side] = cls
 
         count = 0
         for key, value in areas.items():
-            if len(value) > 1:
-                # each time some area has mor than 1 class we have mis-classification
-                count -= 1
+            count -= self.calculate_miss(value)
         return count
+
+    def calculate_miss(self, classes):
+        if len(classes) < 2:
+            return 0
+        sm = sum(classes.values())
+        mx = max(classes.values())
+        return int(((sm - mx) * 100) / sm)
 
     def apply_action(self, action):
         action_index = int(action / 2)
@@ -147,7 +155,8 @@ class StateManipulator:
         return action % self.hyperplane_params_dimension
 
     def sample(self):
-        return np.random.randint(0, self.actions_number)
+        selected_action = np.random.randint(0, self.actions_number)
+        return selected_action
 
     def calc_sqr_cos_sum(self, hyperplane_ind):
         hp_features_ind = self.get_hyperplane_features_index(hyperplane_ind)
