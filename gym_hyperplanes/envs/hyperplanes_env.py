@@ -18,6 +18,9 @@ class HyperPlanesEnv(gym.Env):
     def get_actions_number(self):
         return self.state_manipulator.actions_number
 
+    def print_state(self):
+        self.state_manipulator.print_state()
+
     def step(self, action):
         self.state_manipulator.apply_action(action)
         reward = self.state_manipulator.calculate_reward()

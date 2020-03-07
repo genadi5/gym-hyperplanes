@@ -18,10 +18,10 @@ class StateManipulator:
 
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
         self.features = 2
-        self.hyperplanes = 2
+        self.hyperplanes = 1
 
         # how much we increase selected angle (to selected dimension)
-        self.pi_fraction = 6  # pi / self.pi_fraction
+        self.pi_fraction = 4  # pi / self.pi_fraction
 
         # each hyperplane described by the angles to each dimension axis of the normal vector plus distance from origin
         self.hyperplane_params_dimension = self.features + 1  # for translation
@@ -35,14 +35,16 @@ class StateManipulator:
         self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
 
         self.max_distance_from_origin = 100  # calculate - actually we should be able to move from - to +
-        self.distance_from_origin_delta_percents = 5
+        self.distance_from_origin_delta_percents = 25
 
         self.state = np.zeros(self.states_dimension)
 
         # example of input data
-        self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [80, 80], [70, 10], [90, 10]]
+        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
+        self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
         # and its classification
-        self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
+        # self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
+        self.labels = [1, 1, 1, 1, 2, 2, 2, 2]
 
     def get_state(self):
         return self.state
@@ -111,8 +113,8 @@ class StateManipulator:
             if compensate_features != 0:
                 compensate_delta = math.sqrt(to_remove / compensate_features)
         sum_direction_cosines = self.calc_sqr_cos_sum(hyperplane_index)
-        if abs(1 - sum_direction_cosines) > 1.001:
-            raise "Got sum of compensate_direction cosines {} for states {}".format(sum_direction_cosines, self.state)
+        if abs(1 - sum_direction_cosines) > 0.001:
+            raise Exception("Got sum of direction cosines {} for states {}".format(sum_direction_cosines, self.state))
 
     def compensate_other_angles(self, action_index, compensate_direction, compensate_delta):
         compensated = compensate_delta
@@ -120,7 +122,7 @@ class StateManipulator:
             res = pow(self.state[action_index], 2) + compensate_direction * compensate_delta
             if compensate_direction > 0:
                 if res > 1:
-                    compensated = compensate_delta - (res - 1)
+                    compensated = compensate_delta - abs(1 - res)
                     self.state[action_index] = 1
                 else:
                     self.state[action_index] = math.sqrt(res)
@@ -132,15 +134,15 @@ class StateManipulator:
                     self.state[action_index] = math.sqrt(res)
         else:
             res = pow(self.state[action_index], 2) - compensate_direction * compensate_delta
-            if compensate_direction > 0:
-                if res < -1:
-                    compensated = compensate_delta - (-1 - res)
+            if compensate_direction < 0:
+                if res > 1:
+                    compensated = compensate_delta - abs(1 - res)
                     self.state[action_index] = 1  # hyperplane switched
                 else:
                     self.state[action_index] = -math.sqrt(abs(res))
             else:
-                if res > 0:
-                    compensated = compensate_delta - res
+                if res < 0:
+                    compensated = compensate_delta - (0 - res)
                     self.state[action_index] = 0
                 else:
                     self.state[action_index] = -math.sqrt(abs(res))
@@ -181,3 +183,6 @@ class StateManipulator:
         for i in range(0, hyperplane_ind):
             self.apply_translation(
                 self.hyperplane_params_dimension * hyperplane_ind + self.hyperplane_params_dimension - 1, UP)
+
+    def print_state(self):
+        print(self.state)

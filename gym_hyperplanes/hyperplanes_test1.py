@@ -85,13 +85,14 @@ def main():
 
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
-    steps = []
+    done = False
     for trial in range(trials):
         start = datetime.datetime.now()
         print('starting trail {}'.format(trial))
         cur_state = env.reset().reshape(1, env.get_state_shape()[0])
         best_reward = None
         worst_reward = None
+        step = 0
         for step in range(trial_len):
             action = dqn_agent.act(cur_state)
             new_state, reward, done, _ = env.step(action)
@@ -111,16 +112,27 @@ def main():
             if done:
                 break
 
+            if step > 0 and step % 100 == 0:
+                print(
+                    "rewards: best {}, worst {} in step {} of trail {}".format(best_reward, worst_reward, step, trial))
+                env.print_state()
+
         stop = datetime.datetime.now()
         print("rewards: best {}, worst {} in {}".format(best_reward, worst_reward, (stop - start)))
-        if step >= 199:
+        if not done:
+            print("last state in trail {} and step {}".format(trial, step))
+            env.print_state()
             print("Failed to complete in trial {}".format(trial))
             if step % 10 == 0:
                 dqn_agent.save_model("trial-{}.model".format(trial))
         else:
+            print("success state of trail {} step {}".format(trial, step))
+            env.print_state()
             print("Completed in {} trials".format(trial))
             dqn_agent.save_model("success.model")
             break
+    print("last state")
+    env.print_state()
 
 
 if __name__ == "__main__":
