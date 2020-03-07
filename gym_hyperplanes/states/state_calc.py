@@ -6,6 +6,14 @@ UP = 1
 DOWN = -1
 np.random.seed(123)
 
+
+def calculate_miss(classes):
+    sm = sum(classes.values())
+    mx = max(classes.values())
+    # return int(((sm - mx) * 100) / sm)
+    return sm - mx
+
+
 class StateManipulator:
     def __init__(self):
         """
@@ -51,34 +59,28 @@ class StateManipulator:
 
     def calculate_reward(self):
         areas = dict()
-        for i in range(0, self.hyperplanes):  #
-            h = str(i)
-            hp_features_ind = self.get_hyperplane_features_index(i)
-            for ind in range(0, len(self.labels)):
-                point = self.xy[ind]
+
+        for ind in range(0, len(self.labels)):
+            point = self.xy[ind]
+            area = ""
+            for i in range(0, self.hyperplanes):  #
+                hp_features_ind = self.get_hyperplane_features_index(i)
                 calc = 0
                 for j in range(0, self.features):
                     calc += point[j] * self.state[hp_features_ind + j]
-                side = "-" + h if calc < self.state[self.get_hyperplane_translation_index(i)] else "+" + h
-                cls = dict() if side not in areas else areas[side]
-                # we add all classes we found in the area
-                if self.labels[ind] in cls:
-                    cls[self.labels[ind]] = cls[self.labels[ind]] + 1
-                else:
-                    cls[self.labels[ind]] = 1
-                areas[side] = cls
+                area = area + "0" if calc < self.state[self.get_hyperplane_translation_index(i)] else "1"
+            cls = dict() if area not in areas else areas[area]
+            # we add all classes we found in the area
+            if self.labels[ind] in cls:
+                cls[self.labels[ind]] = cls[self.labels[ind]] + 1
+            else:
+                cls[self.labels[ind]] = 1
+            areas[area] = cls
 
         count = 0
         for key, value in areas.items():
-            count -= self.calculate_miss(value)
+            count -= calculate_miss(value)
         return count
-
-    def calculate_miss(self, classes):
-        if len(classes) < 2:
-            return 0
-        sm = sum(classes.values())
-        mx = max(classes.values())
-        return int(((sm - mx) * 100) / sm)
 
     def apply_action(self, action):
         action_index = int(action / 2)

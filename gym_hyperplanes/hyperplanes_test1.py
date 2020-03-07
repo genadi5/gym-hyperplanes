@@ -81,7 +81,7 @@ def main():
     epsilon = .95
 
     trials = 10
-    trial_len = 10000
+    trial_len = 100000
 
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
