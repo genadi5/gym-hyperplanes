@@ -26,7 +26,7 @@ class StateManipulator:
 
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
         self.features = 2
-        self.hyperplanes = 2
+        self.hyperplanes = 4
 
         # how much we increase selected angle (to selected dimension)
         self.pi_fraction = 4  # pi / self.pi_fraction
@@ -47,12 +47,18 @@ class StateManipulator:
 
         self.state = np.zeros(self.states_dimension)
 
+        self.best_state = None
+        self.best_reward = None
+
         # example of input data
-        self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
-        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
         # and its classification
-        self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
-        # self.labels = [1, 1, 1, 1, 2, 2, 2, 2]
+        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
+        # self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
+        # self.xy = [[20, 20], [30, 30], [60, 50], [70, 60], [50, 10], [60, 10], [80, 10], [90, 10]]
+        # self.labels = [1, 1, 2, 2, 2, 2, 1, 1]
+        self.xy = [[10, 30], [10, 50], [40, 10], [40, 30], [40, 50], [40, 90], [60, 10], [60, 30], [60, 50], [60, 90],
+                   [90, 30], [90, 50]]
+        self.labels = [1, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 1]
 
     def get_state(self):
         return self.state
@@ -68,7 +74,7 @@ class StateManipulator:
                 calc = 0
                 for j in range(0, self.features):
                     calc += point[j] * self.state[hp_features_ind + j]
-                area = area + "0" if calc < self.state[self.get_hyperplane_translation_index(i)] else "1"
+                area = area + ("0" if calc < self.state[self.get_hyperplane_translation_index(i)] else "1")
             cls = dict() if area not in areas else areas[area]
             # we add all classes we found in the area
             if self.labels[ind] in cls:
@@ -80,6 +86,11 @@ class StateManipulator:
         count = 0
         for key, value in areas.items():
             count -= calculate_miss(value)
+
+        if self.best_reward is None or self.best_reward < count:
+            self.best_reward = count
+            self.best_state = np.copy(self.state)
+            print(self.build_state(self.best_state, 'best state:'))
         return count
 
     def apply_action(self, action):
@@ -181,5 +192,15 @@ class StateManipulator:
             self.apply_translation(
                 self.hyperplane_params_dimension * hyperplane_ind + self.hyperplane_params_dimension - 1, UP)
 
-    def print_state(self):
-        print(self.state)
+    def print_state(self, best=False):
+        print(self.build_state(self.state, 'state:'))
+        if best:
+            print(self.build_state(self.best_state, 'best state:'))
+
+    def build_state(self, state, name):
+        s = name
+        delimiter = ''
+        for st in state:
+            s = s + delimiter + str(round(st, 3))
+            delimiter = ' '
+        return s
