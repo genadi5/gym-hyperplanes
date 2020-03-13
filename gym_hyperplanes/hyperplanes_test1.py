@@ -8,6 +8,9 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import Adam
 
+from gym_hyperplanes.iris.iris_data_provider import IrisDataProvider
+from gym_hyperplanes.states.state_calc import StateManipulator
+
 
 class DQN:
     def __init__(self, env):
@@ -76,11 +79,9 @@ def main():
     np.random.seed(123)
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
-    env.set_state_manipulator()
-    gamma = 0.9
-    epsilon = .95
+    env.set_state_manipulator(StateManipulator(IrisDataProvider()))
 
-    trial_len = 1000000
+    episod_len = 1000000
 
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
@@ -90,7 +91,7 @@ def main():
     best_reward = None
     worst_reward = None
     step = 0
-    for step in range(trial_len):
+    for step in range(episod_len):
         action = dqn_agent.act(cur_state)
         new_state, reward, done, _ = env.step(action)
         if best_reward is None or best_reward < reward:

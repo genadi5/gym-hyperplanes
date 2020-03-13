@@ -2,6 +2,9 @@ import math
 
 import numpy as np
 
+from gym_hyperplanes.states.data_provider import TestDataProvider
+from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
+
 UP = 1
 DOWN = -1
 np.random.seed(123)
@@ -15,7 +18,7 @@ def calculate_miss(classes):
 
 
 class StateManipulator:
-    def __init__(self):
+    def __init__(self, data_provider=TestDataProvider(), hyperplane_config=HyperplaneConfig()):
         """
         If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take
         X + 1 - for X angles on each dimension/features plus 1 for to/from origin
@@ -24,12 +27,15 @@ class StateManipulator:
         # all features are supposed to be not negative. If they were negative we assume pre-processing were we
         # change (move) origin in order to make all features to be positive
 
+        self.data_provider = data_provider
+        self.hyperplane_config = hyperplane_config
+
         # self.features = 18  # 3 actions per player, two player: 3 * 3 * 2
-        self.features = 2
-        self.hyperplanes = 4
+        self.features = self.data_provider.get_features_size()
+        self.hyperplanes = self.hyperplane_config.get_hyperplanes()
 
         # how much we increase selected angle (to selected dimension)
-        self.pi_fraction = 4  # pi / self.pi_fraction
+        self.pi_fraction = self.hyperplane_config.get_rotation_fraction()
 
         # each hyperplane described by the angles to each dimension axis of the normal vector plus distance from origin
         self.hyperplane_params_dimension = self.features + 1  # for translation
@@ -42,23 +48,16 @@ class StateManipulator:
         # overall states depends on number of hyperplane and their dimension (number of features)
         self.states_dimension = self.hyperplanes * self.hyperplane_params_dimension
 
-        self.max_distance_from_origin = 100  # calculate - actually we should be able to move from - to +
-        self.distance_from_origin_delta_percents = 5
+        self.hyperplane_max_distance_from_origin = self.data_provider.get_max_distance_from_origin()
+        self.hyperplane_min_distance_from_origin = self.data_provider.get_min_distance_from_origin()
+        self.distance_from_origin_delta_percents = self.data_provider.get_distance_from_origin_delta_percents()
 
         self.state = np.zeros(self.states_dimension)
 
         self.best_state = None
         self.best_reward = None
 
-        # example of input data
-        # and its classification
-        # self.xy = [[1, 1], [10, 10], [10, 60], [20, 70], [60, 60], [70, 70], [70, 10], [90, 10]]
-        # self.labels = [1, 1, 2, 2, 1, 1, 2, 2]
-        # self.xy = [[20, 20], [30, 30], [60, 50], [70, 60], [50, 10], [60, 10], [80, 10], [90, 10]]
-        # self.labels = [1, 1, 2, 2, 2, 2, 1, 1]
-        self.xy = [[10, 30], [10, 50], [40, 10], [40, 30], [40, 50], [40, 90], [60, 10], [60, 30], [60, 50], [60, 90],
-                   [90, 30], [90, 50]]
-        self.labels = [1, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 1]
+        self.last_areas = None
 
     def get_state(self):
         return self.state
@@ -66,21 +65,22 @@ class StateManipulator:
     def calculate_reward(self):
         areas = dict()
 
-        for ind in range(0, len(self.labels)):
-            point = self.xy[ind]
+        for ind in range(0, self.data_provider.get_data_size()):
+            instance = self.data_provider.get_instance(ind)
             area = ""
             for i in range(0, self.hyperplanes):  #
                 hp_features_ind = self.get_hyperplane_features_index(i)
                 calc = 0
                 for j in range(0, self.features):
-                    calc += point[j] * self.state[hp_features_ind + j]
+                    calc += instance[j] * self.state[hp_features_ind + j]
                 area = area + ("0" if calc < self.state[self.get_hyperplane_translation_index(i)] else "1")
             cls = dict() if area not in areas else areas[area]
             # we add all classes we found in the area
-            if self.labels[ind] in cls:
-                cls[self.labels[ind]] = cls[self.labels[ind]] + 1
+            label = instance[len(instance) - 1]
+            if label in cls:
+                cls[label] = cls[label] + 1
             else:
-                cls[self.labels[ind]] = 1
+                cls[label] = 1
             areas[area] = cls
 
         count = 0
@@ -91,6 +91,8 @@ class StateManipulator:
             self.best_reward = count
             self.best_state = np.copy(self.state)
             print(self.build_state(self.best_state, 'best state:'))
+
+        self.last_areas = areas
         return count
 
     def apply_action(self, action):
@@ -103,12 +105,12 @@ class StateManipulator:
             self.apply_rotation(action_index, action_direction)
 
     def apply_translation(self, action_index, action_direction):
-        if action_direction == UP and self.state[action_index] < self.max_distance_from_origin:
+        if action_direction == UP and self.state[action_index] < self.hyperplane_max_distance_from_origin:
             self.state[action_index] += \
-                (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
-        if action_direction == DOWN and 0 < self.state[action_index]:
+                (self.hyperplane_max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
+        if action_direction == DOWN and self.hyperplane_min_distance_from_origin < self.state[action_index]:
             self.state[action_index] -= \
-                (self.max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
+                (self.hyperplane_max_distance_from_origin * self.distance_from_origin_delta_percents) / 100
 
     def apply_rotation(self, action_index, action_direction):
         new_cos = math.cos(
@@ -196,6 +198,7 @@ class StateManipulator:
         print(self.build_state(self.state, 'state:'))
         if best:
             print(self.build_state(self.best_state, 'best state:'))
+        print('areas:' + str(self.last_areas))
 
     def build_state(self, state, name):
         s = name
