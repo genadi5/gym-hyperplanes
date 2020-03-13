@@ -8,6 +8,7 @@ from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 UP = 1
 DOWN = -1
 np.random.seed(123)
+PRECISION = 0.000001
 
 
 def calculate_miss(classes):
@@ -115,30 +116,36 @@ class StateManipulator:
     def apply_rotation(self, action_index, action_direction):
         new_cos = math.cos(
             (math.acos(self.state[action_index]) + action_direction * math.pi / self.pi_fraction) % math.pi)
-        to_remove = pow(self.state[action_index], 2) - pow(new_cos, 2)  # we need to add/remove this from the 1
-        compensate_direction = 1 if to_remove > 0 else -1
-        to_remove = abs(to_remove)
-
         hyperplane_index = self.get_hyperplane_index(action_index)
         hyperplane_features_index = self.get_hyperplane_features_index(hyperplane_index)
 
-        compensate_features = self.features - 1  # angle for one feature changed, others should compensate for 1
-        compensate_delta = to_remove / compensate_features
-        while (to_remove > 0) and (compensate_features > 0):
+        # we need to add/remove this from the 1
+        to_remove = 1 - self.calc_sqr_cos_sum(hyperplane_index, new_cos, action_index)
+        compensate_direction = 1 if to_remove > 0 else -1
+        to_remove = abs(to_remove)
+
+        not_compensate_features = set()
+        compensate_delta = to_remove / (self.features - 1 - len(not_compensate_features))
+        while (abs(to_remove) > PRECISION) and ((self.features - 1 - len(not_compensate_features)) > 0):
             for i in range(hyperplane_features_index, hyperplane_features_index + self.hyperplane_params_dimension - 1):
-                if i != action_index:
-                    compensated = self.compensate_other_angles(i, compensate_direction, compensate_delta,
-                                                               1 if self.state[action_index] >= 0 else -1)
-                    if compensated != compensate_delta:
-                        compensate_features -= 1
-                    to_remove -= compensated
-                else:
-                    self.state[i] = new_cos
-            if compensate_features != 0:
-                compensate_delta = math.sqrt(to_remove / compensate_features)
+                if i not in not_compensate_features:
+                    if i != action_index:
+                        compensated = self.compensate_other_angles(i, compensate_direction, compensate_delta,
+                                                                   1 if self.state[action_index] >= 0 else -1)
+                        if compensated != compensate_delta:
+                            not_compensate_features.add(i)
+                        to_remove -= compensated
+                        if to_remove < 0:
+                            if abs(to_remove) < PRECISION:
+                                break
+                            raise Exception(
+                                "Got to remove negative value {} for states \n{}".format(to_remove, self.state))
+            if (self.features - 1 - len(not_compensate_features)) != 0:
+                compensate_delta = to_remove / (self.features - 1 - len(not_compensate_features))
+        self.state[action_index] = new_cos
         sum_direction_cosines = self.calc_sqr_cos_sum(hyperplane_index)
-        if abs(1 - sum_direction_cosines) > 0.001:
-            raise Exception("Got sum of direction cosines {} for states {}".format(sum_direction_cosines, self.state))
+        if abs(1 - sum_direction_cosines) > PRECISION:
+            raise Exception("Got sum of direction cosines {} for states \n{}".format(sum_direction_cosines, self.state))
 
     def compensate_other_angles(self, action_index, compensate_direction, compensate_delta, sign):
         compensated = compensate_delta
@@ -173,11 +180,14 @@ class StateManipulator:
         selected_action = np.random.randint(0, self.actions_number)
         return selected_action
 
-    def calc_sqr_cos_sum(self, hyperplane_ind):
+    def calc_sqr_cos_sum(self, hyperplane_ind, replace_value=None, replace_index=None):
         hp_features_ind = self.get_hyperplane_features_index(hyperplane_ind)
         calc = 0
         for j in range(0, self.features):
-            calc += pow(self.state[hp_features_ind + j], 2)
+            if replace_index is not None and replace_index == hp_features_ind + j:
+                calc += pow(replace_value, 2)
+            else:
+                calc += pow(self.state[hp_features_ind + j], 2)
         return calc
 
     def reset(self):

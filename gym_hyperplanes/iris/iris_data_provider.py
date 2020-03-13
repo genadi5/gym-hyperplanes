@@ -30,6 +30,9 @@ class IrisDataProvider(DataProvider):
         self.max_distance_from_origin = math.sqrt(pow(max_value, 2) * only_data.shape[1])
         self.min_distance_from_origin = min_value  # calculate - actually we should be able to move from - to +
 
+        print('for iris min value {} and max value {} with delta {}'.format(self.min_distance_from_origin,
+                                                                            self.max_distance_from_origin,
+                                                                            self.distance_from_origin_delta_percents))
         print('loaded {} instances from iris.data'.format(self.data.shape[0]))
 
     def get_features_size(self):
@@ -39,7 +42,7 @@ class IrisDataProvider(DataProvider):
         return self.data.shape[0]
 
     def get_instance(self, ind):
-        return self.data[ind]
+        return self.data.iloc[ind]
 
     def get_max_distance_from_origin(self):
         return self.max_distance_from_origin

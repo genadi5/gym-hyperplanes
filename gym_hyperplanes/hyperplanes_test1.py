@@ -80,6 +80,7 @@ def main():
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
     env.set_state_manipulator(StateManipulator(IrisDataProvider()))
+    # env.set_state_manipulator()
 
     episod_len = 1000000
 
