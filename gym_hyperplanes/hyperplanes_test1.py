@@ -93,11 +93,23 @@ def main():
     cur_state = env.reset().reshape(1, env.get_state_shape()[0])
     best_reward = None
     worst_reward = None
-    step = 0
-    last_step = step
-    for step in range(episod_len):
+    step = 1  # we just for sure init it to 1. later on we will do it again --> step = i + 1
+    last_step = 1
+
+    total_step_time = 0
+    total_act_time = 0
+    total_replay_time = 0
+    total_train_time = 0
+    for i in range(episod_len):
+        step = i + 1
+        start_act = round(time.time())
         action = dqn_agent.act(cur_state)
+        total_act_time += (round(time.time()) - start_act)
+
+        start_step = round(time.time())
         new_state, reward, done, _ = env.step(action)
+        total_step_time += (round(time.time()) - start_step)
+
         if best_reward is None or best_reward < reward:
             best_reward = reward
         if worst_reward is None or worst_reward > reward:
@@ -107,14 +119,24 @@ def main():
         new_state = new_state.reshape(1, env.get_state_shape()[0])
         dqn_agent.remember(cur_state, action, reward, new_state, done)
 
+        start_replay = round(time.time())
         dqn_agent.replay()  # internally iterates default (prediction) model
+        total_replay_time = (round(time.time()) - start_replay)
+        start_train = round(time.time())
         dqn_agent.target_train()  # iterates target model
+        total_train_time = (round(time.time()) - start_train)
 
         cur_state = new_state
         if done:
             break
 
-        if step > 0 and step % 1000 == 0:
+        if step % 10 == 0:
+            avrg_act = total_act_time / step
+            avrg_step = total_step_time / step
+            avrg_replay = total_replay_time / step
+            avrg_train = total_train_time / step
+            print('{}/{} steps, {} act/step, {} step/step, {} replay/step, {} train/step'.
+                  format(step - last_step, step, avrg_act, avrg_step, avrg_replay, avrg_train))
             env.print_state('{}/{} steps in {} secs'.format(step - last_step, step, round(time.time()) - last_period))
             last_period = round(time.time())
             last_step = step

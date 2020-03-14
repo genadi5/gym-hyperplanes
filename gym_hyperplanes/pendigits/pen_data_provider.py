@@ -33,7 +33,7 @@ class PenDataProvider(DataProvider):
         print('for pen min value {} and max value {} with delta {}'.format(self.min_distance_from_origin,
                                                                            self.max_distance_from_origin,
                                                                            self.distance_from_origin_delta_percents))
-        print('loaded {} instances from iris.data'.format(self.data.shape[0]))
+        print('loaded {} instances from pendigits.tra'.format(self.data.shape[0]))
 
     def get_features_size(self):
         return self.data.shape[1] - 1
