@@ -18,8 +18,8 @@ class HyperPlanesEnv(gym.Env):
     def get_actions_number(self):
         return self.state_manipulator.actions_number
 
-    def print_state(self, best=False):
-        self.state_manipulator.print_state(best)
+    def print_state(self, title):
+        self.state_manipulator.print_state(title)
 
     def step(self, action):
         self.state_manipulator.apply_action(action)

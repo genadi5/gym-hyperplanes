@@ -1,5 +1,5 @@
-import datetime
 import random
+import time
 from collections import deque
 
 import gym
@@ -9,6 +9,7 @@ from keras.models import Sequential
 from keras.optimizers import Adam
 
 from gym_hyperplanes.iris.iris_data_provider import IrisDataProvider
+from gym_hyperplanes.pendigits.pen_data_provider import PenDataProvider
 from gym_hyperplanes.states.state_calc import StateManipulator
 
 
@@ -34,8 +35,7 @@ class DQN:
         model.add(Dense(48, activation="relu"))
         model.add(Dense(24, activation="relu"))
         model.add(Dense(self.env.get_actions_number()))
-        model.compile(loss="mean_squared_error",
-                      optimizer=Adam(lr=self.learning_rate))
+        model.compile(loss="mean_squared_error", optimizer=Adam(lr=self.learning_rate))
         return model
 
     def act(self, state):
@@ -60,8 +60,8 @@ class DQN:
             if done:
                 target[0][action] = reward
             else:
-                Q_future = max(self.target_model.predict(new_state)[0])
-                target[0][action] = reward + Q_future * self.gamma
+                q_future = max(self.target_model.predict(new_state)[0])
+                target[0][action] = reward + q_future * self.gamma
             self.model.fit(state, target, epochs=1, verbose=0)
 
     def target_train(self):
@@ -80,6 +80,7 @@ def main():
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
     env.set_state_manipulator(StateManipulator(IrisDataProvider()))
+    # env.set_state_manipulator(StateManipulator(PenDataProvider()))
     # env.set_state_manipulator()
 
     episod_len = 1000000
@@ -87,11 +88,13 @@ def main():
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
     done = False
-    start = datetime.datetime.now()
+    start = round(time.time())
+    last_period = start
     cur_state = env.reset().reshape(1, env.get_state_shape()[0])
     best_reward = None
     worst_reward = None
     step = 0
+    last_step = step
     for step in range(episod_len):
         action = dqn_agent.act(cur_state)
         new_state, reward, done, _ = env.step(action)
@@ -111,23 +114,21 @@ def main():
         if done:
             break
 
-        if step > 0 and step % 100 == 0:
-            print("rewards: best {}, worst {} in step {}".format(best_reward, worst_reward, step))
-            env.print_state()
+        if step > 0 and step % 1000 == 0:
+            env.print_state('{}/{} steps in {} secs'.format(step - last_step, step, round(time.time()) - last_period))
+            last_period = round(time.time())
+            last_step = step
 
-    stop = datetime.datetime.now()
-    print("rewards: best {}, worst {} in {}".format(best_reward, worst_reward, (stop - start)))
+    stop = round(time.time())
+    print("rewards: best {}, worst {} in {}".format(best_reward, worst_reward, stop - start))
     if not done:
         print("last state in step {}".format(step))
-        env.print_state()
         if step % 10 == 0:
             dqn_agent.save_model("trial-{}.model".format(stop))
     else:
         print("success state of step {}".format(step))
-        env.print_state()
         dqn_agent.save_model("success.model")
-    print("last state")
-    env.print_state(best=True)
+    env.print_state('Finished in [{}] steps in [{}] secs'.format(step, stop - start))
 
 
 if __name__ == "__main__":

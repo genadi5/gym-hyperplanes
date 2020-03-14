@@ -1,12 +1,19 @@
+import math
+
 import pandas as pd
+from sklearn import datasets
 
 from gym_hyperplanes.states.data_provider import DataProvider
 
 
 class PenDataProvider(DataProvider):
     def __init__(self):
-        super(IrisDataProvider, self).__init__()
-        self.data = pd.read_csv('pendigits.tra')
+        super(PenDataProvider, self).__init__()
+        pen_tra_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/pendigits/pendigits.tra'
+        if os.path.isfile(pen_tra_file):
+            self.data = pd.read_csv(pen_tra_file, header=None)
+        else:
+            self.data = datasets.load_digits()
 
         only_data = self.data.iloc[:, 0:-1]
         min_value = float(min(only_data))

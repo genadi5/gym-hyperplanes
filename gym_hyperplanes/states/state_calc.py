@@ -56,6 +56,7 @@ class StateManipulator:
         self.state = np.zeros(self.states_dimension)
 
         self.best_state = None
+        self.best_areas = None
         self.best_reward = None
 
         self.last_areas = None
@@ -71,10 +72,9 @@ class StateManipulator:
             area = ""
             for i in range(0, self.hyperplanes):  #
                 hp_features_ind = self.get_hyperplane_features_index(i)
-                calc = 0
-                for j in range(0, self.features):
-                    calc += instance[j] * self.state[hp_features_ind + j]
-                area = area + ("0" if calc < self.state[self.get_hyperplane_translation_index(i)] else "1")
+                calc_side = sum(
+                    np.multiply(instance[0:self.features], self.state[hp_features_ind:hp_features_ind + self.features]))
+                area = area + ("0" if calc_side < self.state[self.get_hyperplane_translation_index(i)] else "1")
             cls = dict() if area not in areas else areas[area]
             # we add all classes we found in the area
             label = instance[len(instance) - 1]
@@ -91,7 +91,8 @@ class StateManipulator:
         if self.best_reward is None or self.best_reward < count:
             self.best_reward = count
             self.best_state = np.copy(self.state)
-            print(self.build_state(self.best_state, 'best state:'))
+            self.best_areas = areas
+            self.print_state('Best reward [{}]'.format(self.best_reward))
 
         self.last_areas = areas
         return count
@@ -204,11 +205,16 @@ class StateManipulator:
             self.apply_translation(
                 self.hyperplane_params_dimension * hyperplane_ind + self.hyperplane_params_dimension - 1, UP)
 
-    def print_state(self, best=False):
-        print(self.build_state(self.state, 'state:'))
-        if best:
-            print(self.build_state(self.best_state, 'best state:'))
-        print('areas:' + str(self.last_areas))
+    def print_state(self, title):
+        print('++{}+++++++++++++++++++++++++++'.format(title))
+        print('***********************************************')
+        print(self.build_state(self.state, 'last state:'))
+        print('last areas:' + str(self.last_areas))
+        print('------------------------------------------------')
+        print(self.build_state(self.best_state, 'best state:'))
+        print('best areas:' + str(self.best_areas))
+        print('best reward:' + str(self.best_reward))
+        print('***********************************************')
 
     def build_state(self, state, name):
         s = name

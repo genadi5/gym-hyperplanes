@@ -12,7 +12,7 @@ class IrisDataProvider(DataProvider):
         super(IrisDataProvider, self).__init__()
         iris_data_files = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/iris/iris.data'
         if os.path.isfile(iris_data_files):
-            self.data = pd.read_csv(iris_data_files)
+            self.data = pd.read_csv(iris_data_files, header=None)
         else:
             self.data = datasets.load_iris()
 
