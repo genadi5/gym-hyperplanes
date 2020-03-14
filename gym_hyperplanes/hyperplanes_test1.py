@@ -130,7 +130,7 @@ def main():
         if done:
             break
 
-        if step % 10 == 0:
+        if step % 1000 == 0:
             avrg_act = total_act_time / step
             avrg_step = total_step_time / step
             avrg_replay = total_replay_time / step

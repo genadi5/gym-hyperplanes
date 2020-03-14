@@ -11,7 +11,10 @@ class DataProvider:
     def get_data_size(self):
         pass
 
-    def get_instance(self, ind):
+    def get_data(self):
+        pass
+
+    def get_label(self, ind):
         pass
 
     def get_max_distance_from_origin(self):
@@ -44,8 +47,11 @@ class TestDataProvider(DataProvider):
     def get_data_size(self):
         return self.data.shape[0]
 
-    def get_instance(self, ind):
-        return self.data[ind]
+    def get_data(self):
+        return self.data[:, :-1]
+
+    def get_label(self, ind):
+        return self.data[ind, -1]
 
     def get_max_distance_from_origin(self):
         return 100

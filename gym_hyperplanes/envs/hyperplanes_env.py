@@ -35,11 +35,11 @@ class HyperPlanesEnv(gym.Env):
         reward = self.state_manipulator.calculate_reward()
         self.total_reward_time += (round(time.time()) - start_reward)
 
-        self.stats()
+        # self.stats()
         return self.state_manipulator.get_state(), reward, reward == 0, {}
 
     def stats(self):
-        if self.actions_done % 10 == 0:
+        if self.actions_done % 1000 == 0:
             avrg_act = self.total_action_time / self.actions_done
             avrg_rwrd = self.total_reward_time / self.actions_done
             print('{} actions, {} average action, {} average reward'.format(self.actions_done, avrg_act, avrg_rwrd))
