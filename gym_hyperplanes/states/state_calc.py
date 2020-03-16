@@ -1,4 +1,5 @@
 import math
+import time
 
 import numpy as np
 
@@ -9,6 +10,7 @@ UP = 1
 DOWN = -1
 np.random.seed(123)
 PRECISION = 0.000001
+MAX_HYPERPLANES = 20
 
 
 def calculate_miss(classes):
@@ -54,11 +56,16 @@ class StateManipulator:
         self.hp_state = np.zeros([self.features, self.hyperplanes])
         self.hp_dist = np.zeros([self.hyperplanes])
 
+        self.best_hp_state = None
+        self.best_hp_dist = None
         self.best_state = None
         self.best_areas = None
         self.best_reward = None
-
         self.last_areas = None
+
+        self.total_areas = 0
+
+        self.actions_done = 0
 
     def get_state(self):
         return self.state
@@ -69,17 +76,19 @@ class StateManipulator:
         calc = np.dot(self.data_provider.get_data(), self.hp_state)
         signs = calc - self.hp_dist
         sides = (signs > 0).astype(int)
-        areas_list = [''.join(side.astype(str)) for side in sides]
 
-        for i in range(len(areas_list)):
-            cls = dict() if areas_list[i] not in areas else areas[areas_list[i]]
+        start_areas = round(time.time())
+        for i, side in enumerate(sides):
+            key = ''.join(side.astype(str))
+            cls = dict() if key not in areas else areas[key]
             # we add all classes we found in the area
             label = self.data_provider.get_label(i)
             if label in cls:
                 cls[label] = cls[label] + 1
             else:
                 cls[label] = 1
-            areas[areas_list[i]] = cls
+            areas[key] = cls
+        self.total_areas += (round(time.time()) - start_areas)
 
         count = 0
         for key, value in areas.items():
@@ -87,14 +96,23 @@ class StateManipulator:
 
         if self.best_reward is None or self.best_reward < count:
             self.best_reward = count
+            self.best_hp_state = np.copy(self.hp_state)
+            self.best_hp_dist = np.copy(self.hp_dist)
             self.best_state = np.copy(self.state)
             self.best_areas = areas
             self.print_state('Best reward [{}]'.format(self.best_reward))
 
+        self.stats()
         self.last_areas = areas
         return count
 
+    def stats(self):
+        if self.actions_done % 10 == 0:
+            avrg_areas = self.total_areas / self.actions_done
+            print('{} actions, {} areas, '.format(self.actions_done, avrg_areas))
+
     def apply_action(self, action):
+        self.actions_done += 1
         action_index = int(action / 2)
         action_direction = UP if action % 2 == 0 else DOWN
 
@@ -106,12 +124,6 @@ class StateManipulator:
             feature_ind = self.get_feature_index(action_index)
             self.apply_rotation(hp_ind, feature_ind, action_direction)
         self.copy_state()
-
-    def copy_state(self):
-        for i in range(self.hyperplanes):
-            start_hp_features = i * (self.features + 1)
-            self.state[start_hp_features:start_hp_features + self.features] = self.hp_state[:, i]
-            self.state[start_hp_features + self.features] = self.hp_dist[i]
 
     def apply_translation(self, hp_ind, action_direction):
         if action_direction == UP and self.hp_dist[hp_ind] < self.hp_max_distance_from_origin:
@@ -186,7 +198,37 @@ class StateManipulator:
             res = res - pow(self.hp_state[feature_ind, hp_ind], 2) + pow(replace_value, 2)
         return res
 
+    def copy_state(self):
+        for i in range(self.hyperplanes):
+            start_hp_features = i * (self.features + 1)
+            self.state[start_hp_features:start_hp_features + self.features] = self.hp_state[:, i]
+            self.state[start_hp_features + self.features] = self.hp_dist[i]
+
+    def add_hyperplane(self):
+        if MAX_HYPERPLANES <= self.hyperplanes:
+            return False
+        self.hyperplanes += 1
+        self.actions_number = (self.features + 1) * self.hyperplanes * 2
+
+        self.hp_state = self.best_hp_state
+        self.hp_dist = self.best_hp_dist
+        self.last_areas = self.best_areas
+
+        self.hp_state = np.hstack((self.hp_state, np.zeros((self.features, 1))))
+        self.hp_state[:, -1] = math.sqrt(1 / self.features)
+
+        self.hp_dist = np.hstack((self.hp_dist, [np.median(self.hp_dist)]))
+        self.state = np.hstack((self.state, [0] * (self.features + 1)))
+        self.copy_state()
+
+        self.best_hp_state = np.copy(self.hp_state)
+        self.best_hp_dist = np.copy(self.hp_dist)
+        self.best_state = np.copy(self.state)
+        return True
+
     def reset(self):
+        self.best_hp_state = None
+        self.best_hp_dist = None
         self.best_state = None
         self.best_areas = None
         self.best_reward = None

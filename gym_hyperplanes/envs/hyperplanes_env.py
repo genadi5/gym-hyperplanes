@@ -17,8 +17,8 @@ class HyperPlanesEnv(gym.Env):
     def set_state_manipulator(self, state_manipulator=None):
         self.state_manipulator = state_manipulator if state_manipulator is not None else StateManipulator()
 
-    def get_state_shape(self):
-        return self.state_manipulator.get_state().shape
+    def get_state(self):
+        return self.state_manipulator.get_state()
 
     def get_actions_number(self):
         return self.state_manipulator.actions_number
@@ -35,14 +35,7 @@ class HyperPlanesEnv(gym.Env):
         reward = self.state_manipulator.calculate_reward()
         self.total_reward_time += (round(time.time()) - start_reward)
 
-        # self.stats()
         return self.state_manipulator.get_state(), reward, reward == 0, {}
-
-    def stats(self):
-        if self.actions_done % 1000 == 0:
-            avrg_act = self.total_action_time / self.actions_done
-            avrg_rwrd = self.total_reward_time / self.actions_done
-            print('{} actions, {} average action, {} average reward'.format(self.actions_done, avrg_act, avrg_rwrd))
 
     def reset(self):
         return self.state_manipulator.reset()
@@ -52,6 +45,9 @@ class HyperPlanesEnv(gym.Env):
 
     def close(self):
         pass
+
+    def add_hyperplane(self):
+        return self.state_manipulator.add_hyperplane()
 
     def sample(self):
         return self.state_manipulator.sample()

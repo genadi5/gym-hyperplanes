@@ -30,7 +30,7 @@ class DQN:
 
     def create_model(self):
         model = Sequential()
-        state_shape = self.env.get_state_shape()
+        state_shape = self.env.get_state().shape
         model.add(Dense(24, input_dim=state_shape[0], activation="relu"))
         model.add(Dense(48, activation="relu"))
         model.add(Dense(24, activation="relu"))
@@ -75,26 +75,50 @@ class DQN:
         self.model.save(fn)
 
 
+NO_REWARD_MAX = 0.25
+MINIMUM_STEPS_TO_CHECK_PROGRESS = 10000000
+LAST_REWARD_MAX_STEPS_AWAY = 100000
+
+
+def check_progress(cur_state, dqn_agent, env, step, best_reward_step_mark):
+    if (MINIMUM_STEPS_TO_CHECK_PROGRESS < step) and step * (1 - NO_REWARD_MAX) > best_reward_step_mark:
+        print('No reward improvement was from step {} up to {}, which more than {} percents. Adding hyperplane'.format(
+            best_reward_step_mark, step, NO_REWARD_MAX))
+        if env.add_hyperplane():
+            cur_state = env.get_state()
+            dqn_agent = DQN(env=env)
+            best_reward_step_mark = step
+        else:
+            print('Max hyperplanes reached')
+
+    return cur_state, dqn_agent, best_reward_step_mark
+
+
 def main():
     np.random.seed(123)
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
-    env.set_state_manipulator(StateManipulator(IrisDataProvider()))
-    # env.set_state_manipulator(StateManipulator(PenDataProvider()))
+    # env.set_state_manipulator(StateManipulator(IrisDataProvider()))
+    env.set_state_manipulator(StateManipulator(PenDataProvider()))
     # env.set_state_manipulator()
 
     episod_len = 1000000
 
     # updateTargetNetwork = 1000
-    dqn_agent = DQN(env=env)
     done = False
     start = round(time.time())
     last_period = start
-    cur_state = env.reset().reshape(1, env.get_state_shape()[0])
+
+    dqn_agent = DQN(env=env)
+    cur_state = env.reset().reshape(1, env.get_state().shape[0])
+
     best_reward = None
     worst_reward = None
     step = 1  # we just for sure init it to 1. later on we will do it again --> step = i + 1
     last_step = 1
+
+    best_reward_step_mark = 1
+    last_reward_step = 1
 
     total_step_time = 0
     total_act_time = 0
@@ -102,6 +126,12 @@ def main():
     total_train_time = 0
     for i in range(episod_len):
         step = i + 1
+        if LAST_REWARD_MAX_STEPS_AWAY < step - last_reward_step:
+            print('Was no reward improvement for {} steps. Ending'.format(step - last_reward_step))
+            break
+        cur_state, dqn_agent, best_reward_step_mark = check_progress(cur_state, dqn_agent, env, step,
+                                                                     best_reward_step_mark)
+
         start_act = round(time.time())
         action = dqn_agent.act(cur_state)
         total_act_time += (round(time.time()) - start_act)
@@ -112,11 +142,12 @@ def main():
 
         if best_reward is None or best_reward < reward:
             best_reward = reward
+            best_reward_step_mark = step
+            last_reward_step = step
         if worst_reward is None or worst_reward > reward:
             worst_reward = reward
 
-        # reward = reward if not done else -20
-        new_state = new_state.reshape(1, env.get_state_shape()[0])
+        new_state = new_state.reshape(1, env.get_state().shape[0])
         dqn_agent.remember(cur_state, action, reward, new_state, done)
 
         start_replay = round(time.time())
@@ -135,9 +166,13 @@ def main():
             avrg_step = total_step_time / step
             avrg_replay = total_replay_time / step
             avrg_train = total_train_time / step
-            print('{}/{} steps, {} act/step, {} step/step, {} replay/step, {} train/step'.
-                  format(step - last_step, step, avrg_act, avrg_step, avrg_replay, avrg_train))
-            env.print_state('{}/{} steps in {} secs'.format(step - last_step, step, round(time.time()) - last_period))
+            print('{}/{} steps, {} best reward steps, {} best reward'.format(step - last_step, step,
+                                                                             best_reward_step_mark,
+                                                                             best_reward))
+            print('{} act/step, {} step/step, {} replay/step, {} train/step'.format(avrg_act, avrg_step, avrg_replay,
+                                                                                    avrg_train))
+            env.print_state('{}/{} steps in {} secs'.format(step - last_step, step,
+                                                            round(time.time()) - last_period))
             last_period = round(time.time())
             last_step = step
 
