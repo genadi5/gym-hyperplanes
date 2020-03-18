@@ -1,6 +1,6 @@
 class HyperplaneConfig:
     def __init__(self):
-        self.hyperplanes = 8
+        self.hyperplanes = 30
         self.pi_fraction = 12  # pi / self.pi_fraction
         print('hyperplanes {} with rotation fraction {}'.format(self.hyperplanes, self.pi_fraction))
 
