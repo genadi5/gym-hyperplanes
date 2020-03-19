@@ -186,11 +186,7 @@ def main():
     env.print_state('Finished in [{}] steps in [{}] secs'.format(step, stop - start))
 
     hp_state = env.get_hp_state()
-
     hs.save_hyperplanes_state(hp_state, '/downloads/hyperplanes/result.txt')
-    hp_state1 = hs.load_hyperplanes_state('/downloads/hyperplanes/result.txt')
-
-    print(hp_state1)
 
 
 if __name__ == "__main__":
