@@ -1,12 +1,11 @@
 import math
-import time
 
 import numpy as np
 
 from gym_hyperplanes.states.data_provider import TestDataProvider
 from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
-
 # import time
+from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
 
 UP = 1
 DOWN = -1
@@ -69,6 +68,9 @@ class StateManipulator:
         self.total_areas = 0
 
         self.actions_done = 0
+
+    def get_hp_state(self):
+        return HyperplanesState(self.best_hp_state, self.best_hp_dist, self.best_areas, self.best_reward)
 
     def get_state(self):
         return self.state

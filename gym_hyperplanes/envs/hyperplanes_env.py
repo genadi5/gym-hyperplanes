@@ -17,6 +17,9 @@ class HyperPlanesEnv(gym.Env):
     def set_state_manipulator(self, state_manipulator=None):
         self.state_manipulator = state_manipulator if state_manipulator is not None else StateManipulator()
 
+    def get_hp_state(self):
+        return self.state_manipulator.get_hp_state()
+
     def get_state(self):
         return self.state_manipulator.get_state()
 
