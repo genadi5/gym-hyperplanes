@@ -21,7 +21,8 @@ class HyperplanesClassifier:
             for k, val in enumerate(side):
                 if val:
                     key |= 1 << k
-            cls = 'UNKNOWN' if key not in self.hyperplane_state.areas else self.hyperplane_state.areas[key]
+            cls = 'UNKNOWN' if key not in self.hyperplane_state.areas_to_classes \
+                else self.hyperplane_state.areas_to_classes[key]
             result.append(max(cls.items(), key=operator.itemgetter(1))[0])
 
         return np.array(result)

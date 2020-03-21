@@ -1,3 +1,5 @@
+https://github.com/khalibartan/simplex-method
+
 A python implementation for simplex method
 
 The current implementation uses two phase method and is able to identify case for Infeasible solution, Unbounded solution, Degeneracy and Alternate Solution. In case of Infeasible solution and Unbounded solution it raises an ValueError and in case of Degeneracy and Alternate Solution it gives a warning and returns a optimum solution.

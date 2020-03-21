@@ -54,16 +54,20 @@ class StateManipulator:
         self.hp_min_distance_from_origin = self.data_provider.get_min_distance_from_origin()
         self.dist_from_origin_delta_percents = self.data_provider.get_distance_from_origin_delta_percents()
 
+        # alls hyperplane positions are concatenated in one array
         self.state = np.zeros(self.hyperplanes * (self.features + 1))
+        # each hyperplane will be encoded in dedicated column
+        # number of rows is like number of features
         self.hp_state = np.zeros([self.features, self.hyperplanes])
+        # the 'right' part of hyperplane equality
         self.hp_dist = np.zeros([self.hyperplanes])
 
+        # we always store best results
         self.best_hp_state = None
         self.best_hp_dist = None
         self.best_state = None
         self.best_areas = None
         self.best_reward = None
-        self.last_areas = None
 
         self.total_areas = 0
 
@@ -78,13 +82,15 @@ class StateManipulator:
     def calculate_reward(self):
         areas = dict()
 
+        # calculate value of instances per hyperplane
         calc = np.dot(self.data_provider.get_data(), self.hp_state)
+        # find whether it is above or below it
         signs = calc - self.hp_dist
+        # transform it to true/false - meaning below or above
         sides = (signs > 0).astype(int)
 
         # start_areas = round(time.time())
         for i, side in enumerate(sides):
-            # key = ''.join(side.astype(str))
             key = 0
             for k, val in enumerate(side):
                 if val:
@@ -112,7 +118,6 @@ class StateManipulator:
             self.print_state('Best reward [{}]'.format(self.best_reward))
 
         # self.stats()
-        self.last_areas = areas
         return count
 
     def stats(self):
@@ -221,7 +226,6 @@ class StateManipulator:
 
         self.hp_state = self.best_hp_state
         self.hp_dist = self.best_hp_dist
-        self.last_areas = self.best_areas
 
         self.hp_state = np.hstack((self.hp_state, np.zeros((self.features, 1))))
         self.hp_state[:, -1] = math.sqrt(1 / self.features)
@@ -241,7 +245,6 @@ class StateManipulator:
         self.best_state = None
         self.best_areas = None
         self.best_reward = None
-        self.last_areas = None
 
         self.state = np.zeros(self.hyperplanes * (self.features + 1))
         self.hp_state = np.zeros([self.features, self.hyperplanes])
@@ -257,10 +260,6 @@ class StateManipulator:
 
     def print_state(self, title):
         print('+++++{}+++++++++++++++++++++++++++'.format(title))
-        # print('***********************************************')
-        # print(self.build_state(self.state, 'last state:'))
-        # print('last areas:' + str(self.last_areas))
-        # print('------------------------------------------------')
         print(self.build_state(self.best_state, 'best state:'))
         print('best areas:' + str(self.best_areas))
         print('best reward:' + str(self.best_reward))
