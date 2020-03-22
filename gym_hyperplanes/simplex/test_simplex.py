@@ -4,7 +4,7 @@ import numpy as np
 
 import gym_hyperplanes.states.hyperplanes_state as hs
 from gym_hyperplanes.classifiers.hyperplanes_classifier import HyperplanesClassifier
-from gym_hyperplanes.simplex.simplex import Simplex
+from gym_hyperplanes.simplex.simplex_new0 import Simplex
 
 
 def generate_objective(number_of_features):

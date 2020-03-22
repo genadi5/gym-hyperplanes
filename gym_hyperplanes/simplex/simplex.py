@@ -1,273 +1,367 @@
-from fractions import Fraction
-from warnings import warn
+"""
+Read-me:
+Call functions in this order:
+    problem = gen_matrix(v,c)
+    constrain(problem, string)
+    obj(problem, string)
+    maxz(problem)
+gen_matrix() produces a matrix to be given constraints and an objective function to maximize or minimize.
+    It takes var (variable number) and cons (constraint number) as parameters.
+    gen_matrix(2,3) will create a 4x7 matrix by design.
+constrain() constrains the problem. It takes the problem as the first argument and a string as the second. The string should be
+    entered in the form of 1,2,G,10 meaning 1(x1) + 2(x2) >= 10.
+    Use 'L' for <= instead of 'G'
+Use obj() only after entering all constraints, in the form of 1,2,0 meaning 1(x1) +2(x2) +0
+    The final term is always reserved for a constant and 0 cannot be omitted.
+Use maxz() to solve a maximization LP problem. Use minz() to solve a minimization problem.
+Disclosure -- pivot() function, subcomponent of maxz() and minz(), has a couple bugs. So far, these have only occurred when
+    minz() has been called.
+"""
+
+import numpy as np
 
 
-class Simplex(object):
-    def __init__(self, num_vars, constraints, objective_function):
-        """
-        num_vars: Number of variables
-        equations: A list of strings representing constraints
-        each variable should be start with x followed by a underscore
-        and a number
-        eg of constraints
-        ['1x_1 + 2x_2 >= 4', '2x_3 + 3x_1 <= 5', 'x_3 + 3x_2 = 6']
-        Note that in x_num, num should not be more than num_vars.
-        Also single spaces should be used in expressions.
-        objective_function: should be a tuple with first element
-        either 'min' or 'max', and second element be the equation
-        eg
-        ('min', '2x_1 + 4x_3 + 5x_2')
-        For solution finding algorithm uses two-phase simplex method
-        """
-        self.num_vars = num_vars
-        self.constraints = constraints
-        self.objective = objective_function[0]
-        self.objective_function = objective_function[1]
-        self.coeff_matrix, self.r_rows, self.num_s_vars, self.num_r_vars = self.construct_matrix_from_constraints()
-        del self.constraints
-        self.basic_vars = [0 for i in range(len(self.coeff_matrix))]
-        self.phase1()
-        r_index = self.num_r_vars + self.num_s_vars
+# generates an empty matrix with adequate size for variables and constraints.
+def gen_matrix(var, cons):
+    tab = np.zeros((cons + 1, var + cons + 2))
+    return tab
 
-        for i in self.basic_vars:
-            if i > r_index:
-                raise ValueError("Infeasible solution")
 
-        self.delete_r_vars()
+# checks the furthest right column for negative values ABOVE the last row. If negative values exist, another pivot is required.
+def next_round_r(table):
+    m = min(table[:-1, -1])
+    if m >= 0:
+        return False
+    else:
+        return True
 
-        if 'min' in self.objective.lower():
-            self.solution = self.objective_minimize()
 
+# checks that the bottom row, excluding the final column, for negative values. If negative values exist, another pivot is required.
+def next_round(table):
+    lr = len(table[:, 0])
+    m = min(table[lr - 1, :-1])
+    if m >= 0:
+        return False
+    else:
+        return True
+
+
+# Similar to next_round_r function, but returns row index of negative element in furthest right column
+def find_neg_r(table):
+    # lc = number of columns, lr = number of rows
+    lc = len(table[0, :])
+    # search every row (excluding last row) in final column for min value
+    m = min(table[:-1, lc - 1])
+    if m <= 0:
+        # n = row index of m location
+        n = np.where(table[:-1, lc - 1] == m)[0][0]
+    else:
+        n = None
+    return n
+
+
+# returns column index of negative element in bottom row
+def find_neg(table):
+    lr = len(table[:, 0])
+    m = min(table[lr - 1, :-1])
+    if m <= 0:
+        # n = row index for m
+        n = np.where(table[lr - 1, :-1] == m)[0][0]
+    else:
+        n = None
+    return n
+
+
+# locates pivot element in tableu to remove the negative element from the furthest right column.
+def loc_piv_r(table):
+    total = []
+    # r = row index of negative entry
+    r = find_neg_r(table)
+    # finds all elements in row, r, excluding final column
+    row = table[r, :-1]
+    # finds minimum value in row (excluding the last column)
+    m = min(row)
+    # c = column index for minimum entry in row
+    c = np.where(row == m)[0][0]
+    # all elements in column
+    col = table[:-1, c]
+    # need to go through this column to find smallest positive ratio
+    for i, b in zip(col, table[:-1, -1]):
+        # i cannot equal 0 and b/i must be positive.
+        if i ** 2 > 0 and b / i > 0:
+            total.append(b / i)
         else:
-            self.solution = self.objective_maximize()
-        self.optimize_val = self.coeff_matrix[0][-1]
+            # placeholder for elements that did not satisfy the above requirements. Otherwise, our index number would be faulty.
+            total.append(0)
+    element = max(total)
+    for t in total:
+        if t > 0 and t < element:
+            element = t
+        else:
+            continue
 
-    def construct_matrix_from_constraints(self):
-        num_s_vars = 0  # number of slack and surplus variables
-        num_r_vars = 0  # number of additional variables to balance equality and less than equal to
-        for expression in self.constraints:
-            if '>=' in expression:
-                num_s_vars += 1
+    index = total.index(element)
+    return [index, c]
 
-            elif '<=' in expression:
-                num_s_vars += 1
-                num_r_vars += 1
 
-            elif '=' in expression:
-                num_r_vars += 1
-        total_vars = self.num_vars + num_s_vars + num_r_vars
+# similar process, returns a specific array element to be pivoted on.
+def loc_piv(table):
+    if next_round(table):
+        total = []
+        n = find_neg(table)
+        for i, b in zip(table[:-1, n], table[:-1, -1]):
+            if i ** 2 > 0 and b / i > 0:
+                total.append(b / i)
+            else:
+                # placeholder for elements that did not satisfy the above requirements. Otherwise, our index number would be faulty.
+                total.append(0)
+        element = max(total)
+        for t in total:
+            if t > 0 and t < element:
+                element = t
+            else:
+                continue
 
-        coeff_matrix = [[Fraction("0/1") for i in range(total_vars + 1)] for j in range(len(self.constraints) + 1)]
-        s_index = self.num_vars
-        r_index = self.num_vars + num_s_vars
-        r_rows = []  # stores the non -zero index of r
-        for i in range(1, len(self.constraints) + 1):
-            constraint = self.constraints[i - 1].split(' ')
+        index = total.index(element)
+        return [index, n]
 
-            for j in range(len(constraint)):
 
-                if '_' in constraint[j]:
-                    coeff, index = constraint[j].split('_')
-                    if constraint[j - 1] is '-':
-                        coeff_matrix[i][int(index) - 1] = Fraction("-" + coeff[:-1] + "/1")
-                    else:
-                        coeff_matrix[i][int(index) - 1] = Fraction(coeff[:-1] + "/1")
+# Takes string input and returns a list of numbers to be arranged in tableu
+def convert(eq):
+    eq = eq.split(',')
+    if 'G' in eq:
+        g = eq.index('G')
+        del eq[g]
+        eq = [float(i) * -1 for i in eq]
+        return eq
+    if 'L' in eq:
+        l = eq.index('L')
+        del eq[l]
+        eq = [float(i) for i in eq]
+        return eq
 
-                elif constraint[j] == '<=':
-                    coeff_matrix[i][s_index] = Fraction("1/1")  # add surplus variable
-                    s_index += 1
 
-                elif constraint[j] == '>=':
-                    coeff_matrix[i][s_index] = Fraction("-1/1")  # slack variable
-                    coeff_matrix[i][r_index] = Fraction("1/1")  # r variable
-                    s_index += 1
-                    r_index += 1
-                    r_rows.append(i)
+# The final row of the tablue in a minimum problem is the opposite of a maximization problem so elements are multiplied by (-1)
+def convert_min(table):
+    table[-1, :-2] = [-1 * i for i in table[-1, :-2]]
+    table[-1, -1] = -1 * table[-1, -1]
+    return table
 
-                elif constraint[j] == '=':
-                    coeff_matrix[i][r_index] = Fraction("1/1")  # r variable
-                    r_index += 1
-                    r_rows.append(i)
 
-            coeff_matrix[i][-1] = Fraction(constraint[-1] + "/1")
+# generates x1,x2,...xn for the varying number of variables.
+def gen_var(table):
+    lc = len(table[0, :])
+    lr = len(table[:, 0])
+    var = lc - lr - 1
+    v = []
+    for i in range(var):
+        v.append('x' + str(i + 1))
+    return v
 
-        return coeff_matrix, r_rows, num_s_vars, num_r_vars
 
-    def phase1(self):
-        # Objective function here is minimize r1+ r2 + r3 + ... + rn
-        r_index = self.num_vars + self.num_s_vars
-        for i in range(r_index, len(self.coeff_matrix[0]) - 1):
-            self.coeff_matrix[0][i] = Fraction("-1/1")
-        coeff_0 = 0
-        for i in self.r_rows:
-            self.coeff_matrix[0] = add_row(self.coeff_matrix[0], self.coeff_matrix[i])
-            self.basic_vars[i] = r_index
-            r_index += 1
-        s_index = self.num_vars
-        for i in range(1, len(self.basic_vars)):
-            if self.basic_vars[i] == 0:
-                self.basic_vars[i] = s_index
-                s_index += 1
+# pivots the tableau such that negative elements are purged from the last row and last column
+def pivot(row, col, table):
+    # number of rows
+    lr = len(table[:, 0])
+    # number of columns
+    lc = len(table[0, :])
+    t = np.zeros((lr, lc))
+    pr = table[row, :]
+    if table[row, col] ** 2 > 0:  # new
+        e = 1 / table[row, col]
+        r = pr * e
+        for i in range(len(table[:, col])):
+            k = table[i, :]
+            c = table[i, col]
+            if list(k) == list(pr):
+                continue
+            else:
+                t[i, :] = list(k - r * c)
+        t[row, :] = list(r)
+        return t
+    else:
+        print('Cannot pivot on this element.')
 
-        # Run the simplex iterations
-        key_column = max_index(self.coeff_matrix[0])
-        condition = self.coeff_matrix[0][key_column] > 0
 
-        while condition is True:
-            key_row = self.find_key_row(key_column=key_column)
-            self.basic_vars[key_row] = key_column
-            pivot = self.coeff_matrix[key_row][key_column]
-            self.normalize_to_pivot(key_row, pivot)
-            self.make_key_column_zero(key_column, key_row)
+# checks if there is room in the matrix to add another constraint
+def add_cons(table):
+    lr = len(table[:, 0])
+    # want to know IF at least 2 rows of all zero elements exist
+    empty = []
+    # iterate through each row
+    for i in range(lr):
+        total = 0
+        for j in table[i, :]:
+            # use squared value so (-x) and (+x) don't cancel each other out
+            total += j ** 2
+        if total == 0:
+            # append zero to list ONLY if all elements in a row are zero
+            empty.append(total)
+    # There are at least 2 rows with all zero elements if the following is true
+    if len(empty) > 1:
+        return True
+    else:
+        return False
 
-            key_column = max_index(self.coeff_matrix[0])
-            condition = self.coeff_matrix[0][key_column] > 0
 
-    def find_key_row(self, key_column):
-        min_val = float("inf")
-        min_i = 0
-        for i in range(1, len(self.coeff_matrix)):
-            if self.coeff_matrix[i][key_column] > 0:
-                val = self.coeff_matrix[i][-1] / self.coeff_matrix[i][key_column]
-                if val < min_val:
-                    min_val = val
-                    min_i = i
-        if min_val == float("inf"):
-            raise ValueError("Unbounded solution")
-        if min_val == 0:
-            warn("Dengeneracy")
-        return min_i
-
-    def normalize_to_pivot(self, key_row, pivot):
-        for i in range(len(self.coeff_matrix[0])):
-            self.coeff_matrix[key_row][i] /= pivot
-
-    def make_key_column_zero(self, key_column, key_row):
-        num_columns = len(self.coeff_matrix[0])
-        for i in range(len(self.coeff_matrix)):
-            if i != key_row:
-                factor = self.coeff_matrix[i][key_column]
-                for j in range(num_columns):
-                    self.coeff_matrix[i][j] -= self.coeff_matrix[key_row][j] * factor
-
-    def delete_r_vars(self):
-        for i in range(len(self.coeff_matrix)):
-            non_r_length = self.num_vars + self.num_s_vars + 1
-            length = len(self.coeff_matrix[i])
-            while length != non_r_length:
-                del self.coeff_matrix[i][non_r_length - 1]
-                length -= 1
-
-    def update_objective_function(self):
-        objective_function_coeffs = self.objective_function.split()
-        for i in range(len(objective_function_coeffs)):
-            if '_' in objective_function_coeffs[i]:
-                coeff, index = objective_function_coeffs[i].split('_')
-                if objective_function_coeffs[i - 1] is '-':
-                    self.coeff_matrix[0][int(index) - 1] = Fraction(coeff[:-1] + "/1")
-                else:
-                    self.coeff_matrix[0][int(index) - 1] = Fraction("-" + coeff[:-1] + "/1")
-
-    def check_alternate_solution(self):
-        for i in range(len(self.coeff_matrix[0])):
-            if self.coeff_matrix[0][i] and i not in self.basic_vars[1:]:
-                warn("Alternate Solution exists")
+# adds a constraint to the matrix
+def constrain(table, eq):
+    if add_cons(table):
+        lc = len(table[0, :])
+        lr = len(table[:, 0])
+        var = lc - lr - 1
+        # set up counter to iterate through the total length of rows
+        j = 0
+        while j < lr:
+            # Iterate by row
+            row_check = table[j, :]
+            # total will be sum of entries in row
+            total = 0
+            # Find first row with all 0 entries
+            for i in row_check:
+                total += float(i ** 2)
+            if total == 0:
+                # We've found the first row with all zero entries
+                row = row_check
                 break
+            j += 1
 
-    def objective_minimize(self):
-        self.update_objective_function()
+        eq = convert(eq)
+        i = 0
+        # iterate through all terms in the constraint function, excluding the last
+        while i < len(eq) - 1:
+            # assign row values according to the equation
+            row[i] = eq[i]
+            i += 1
+        # row[len(eq)-1] = 1
+        row[-1] = eq[-1]
 
-        for row, column in enumerate(self.basic_vars[1:]):
-            if self.coeff_matrix[0][column] != 0:
-                self.coeff_matrix[0] = add_row(self.coeff_matrix[0], multiply_const_row(-self.coeff_matrix[0][column],
-                                                                                        self.coeff_matrix[row + 1]))
-
-        key_column = max_index(self.coeff_matrix[0])
-        condition = self.coeff_matrix[0][key_column] > 0
-
-        while condition is True:
-            key_row = self.find_key_row(key_column=key_column)
-            self.basic_vars[key_row] = key_column
-            pivot = self.coeff_matrix[key_row][key_column]
-            self.normalize_to_pivot(key_row, pivot)
-            self.make_key_column_zero(key_column, key_row)
-
-            key_column = max_index(self.coeff_matrix[0])
-            condition = self.coeff_matrix[0][key_column] > 0
-
-        solution = {}
-        for i, var in enumerate(self.basic_vars[1:]):
-            if var < self.num_vars:
-                solution['x_' + str(var + 1)] = self.coeff_matrix[i + 1][-1]
-
-        for i in range(0, self.num_vars):
-            if i not in self.basic_vars[1:]:
-                solution['x_' + str(i + 1)] = Fraction("0/1")
-        self.check_alternate_solution()
-        return solution
-
-    def objective_maximize(self):
-        self.update_objective_function()
-
-        for row, column in enumerate(self.basic_vars[1:]):
-            if self.coeff_matrix[0][column] != 0:
-                self.coeff_matrix[0] = add_row(self.coeff_matrix[0], multiply_const_row(-self.coeff_matrix[0][column],
-                                                                                        self.coeff_matrix[row + 1]))
-
-        key_column = min_index(self.coeff_matrix[0])
-        condition = self.coeff_matrix[0][key_column] < 0
-
-        while condition is True:
-            key_row = self.find_key_row(key_column=key_column)
-            self.basic_vars[key_row] = key_column
-            pivot = self.coeff_matrix[key_row][key_column]
-            self.normalize_to_pivot(key_row, pivot)
-            self.make_key_column_zero(key_column, key_row)
-
-            key_column = min_index(self.coeff_matrix[0])
-            condition = self.coeff_matrix[0][key_column] < 0
-
-        solution = {}
-        for i, var in enumerate(self.basic_vars[1:]):
-            if var < self.num_vars:
-                solution['x_' + str(var + 1)] = self.coeff_matrix[i + 1][-1]
-
-        for i in range(0, self.num_vars):
-            if i not in self.basic_vars[1:]:
-                solution['x_' + str(i + 1)] = Fraction("0/1")
-
-        self.check_alternate_solution()
-
-        return solution
+        # add slack variable according to location in tableau.
+        row[var + j] = 1
+    else:
+        print('Cannot add another constraint.')
 
 
-def add_row(row1, row2):
-    row_sum = [0 for i in range(len(row1))]
-    for i in range(len(row1)):
-        row_sum[i] = row1[i] + row2[i]
-    return row_sum
+# checks to determine if an objective function can be added to the matrix
+def add_obj(table):
+    lr = len(table[:, 0])
+    # want to know IF exactly one row of all zero elements exist
+    empty = []
+    # iterate through each row
+    for i in range(lr):
+        total = 0
+        for j in table[i, :]:
+            # use squared value so (-x) and (+x) don't cancel each other out
+            total += j ** 2
+        if total == 0:
+            # append zero to list ONLY if all elements in a row are zero
+            empty.append(total)
+    # There is exactly one row with all zero elements if the following is true
+    if len(empty) == 1:
+        return True
+    else:
+        return False
 
 
-def max_index(row):
-    max_i = 0
-    for i in range(0, len(row) - 1):
-        if row[i] > row[max_i]:
-            max_i = i
+# adds the onjective functio nto the matrix.
+def obj(table, eq):
+    if add_obj(table):
+        eq = [float(i) for i in eq.split(',')]
+        lr = len(table[:, 0])
+        row = table[lr - 1, :]
+        i = 0
+        # iterate through all terms in the constraint function, excluding the last
+        while i < len(eq) - 1:
+            # assign row values according to the equation
+            row[i] = eq[i] * -1
+            i += 1
+        row[-2] = 1
+        row[-1] = eq[-1]
+    else:
+        print('You must finish adding constraints before the objective function can be added.')
 
-    return max_i
+
+# solves maximization problem for optimal solution, returns dictionary w/ keys x1,x2...xn and max.
+def maxz(table, output='summary'):
+    while next_round_r(table):
+        table = pivot(loc_piv_r(table)[0], loc_piv_r(table)[1], table)
+    while next_round(table):
+        table = pivot(loc_piv(table)[0], loc_piv(table)[1], table)
+
+    lc = len(table[0, :])
+    lr = len(table[:, 0])
+    var = lc - lr - 1
+    i = 0
+    val = {}
+    for i in range(var):
+        col = table[:, i]
+        s = sum(col)
+        m = max(col)
+        if float(s) == float(m):
+            loc = np.where(col == m)[0][0]
+            val[gen_var(table)[i]] = table[loc, -1]
+        else:
+            val[gen_var(table)[i]] = 0
+    val['max'] = table[-1, -1]
+    for k, v in val.items():
+        val[k] = round(v, 6)
+    if output == 'table':
+        return table
+    else:
+        return val
 
 
-def multiply_const_row(const, row):
-    mul_row = []
-    for i in row:
-        mul_row.append(const * i)
-    return mul_row
+# solves minimization problems for optimal solution, returns dictionary w/ keys x1,x2...xn and min.
+def minz(table, output='summary'):
+    table = convert_min(table)
+
+    while next_round_r(table):
+        table = pivot(loc_piv_r(table)[0], loc_piv_r(table)[1], table)
+    while next_round(table):
+        table = pivot(loc_piv(table)[0], loc_piv(table)[1], table)
+
+    lc = len(table[0, :])
+    lr = len(table[:, 0])
+    var = lc - lr - 1
+    i = 0
+    val = {}
+    for i in range(var):
+        col = table[:, i]
+        s = sum(col)
+        m = max(col)
+        if float(s) == float(m):
+            loc = np.where(col == m)[0][0]
+            val[gen_var(table)[i]] = table[loc, -1]
+        else:
+            val[gen_var(table)[i]] = 0
+    val['min'] = table[-1, -1] * -1
+    for k, v in val.items():
+        val[k] = round(v, 6)
+    if output == 'table':
+        return table
+    else:
+        return val
 
 
-def min_index(row):
-    min_i = 0
-    for i in range(0, len(row)):
-        if row[min_i] > row[i]:
-            min_i = i
+if __name__ == "__main__":
+    # m = gen_matrix(2, 2)
+    # constrain(m, '2,-1,G,10')
+    # constrain(m, '1,1,L,20')
+    # obj(m, '5,10,0')
+    # print(maxz(m))
+    #
+    # m = gen_matrix(2, 4)
+    # constrain(m, '2,5,G,30')
+    # constrain(m, '-3,5,G,5')
+    # constrain(m, '8,3,L,85')
+    # constrain(m, '-9,7,L,42')
+    # obj(m, '2,7,0')
+    # print(minz(m))
 
-    return min_i
+    m = gen_matrix(2, 4)
+    constrain(m, '1,1,G,1.5')
+    constrain(m, '1,1,L,4.5')
+    constrain(m, '-1,1,G,-1')
+    constrain(m, '-1,1,L,3')
+    obj(m, '1,1,0')
+    print(minz(m))
