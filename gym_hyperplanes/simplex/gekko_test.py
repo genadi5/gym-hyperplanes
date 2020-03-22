@@ -36,7 +36,7 @@ def test2():
 
 
 def test3():  # 11101
-    m = GEKKO()  # Initialize gekko
+    m = GEKKO(remote=False)  # Initialize gekko
     # Initialize variables
     x1 = m.Var(value=0, lb=0, ub=100)
     x2 = m.Var(value=0, lb=0, ub=100)
@@ -54,7 +54,7 @@ def test3():  # 11101
 
 
 def test4():  # 01111
-    m = GEKKO()  # Initialize gekko
+    m = GEKKO(remote=False)  # Initialize gekko
     # Initialize variables
     x1 = m.Var(value=0, lb=0, ub=100)
     x2 = m.Var(value=0, lb=0, ub=100)
