@@ -14,12 +14,11 @@ PRECISION = 0.000001
 MAX_HYPERPLANES = 20
 
 
-def calculate_miss(classes):
+def calculate_miss(classes, area_accuracy_threshold=1):
     sm = sum(classes.values())
     mx = max(classes.values())
-    # return int(((sm - mx) * 100) / sm)
-    # return (sm - mx) / sm
-    return sm - mx
+
+    return 0 if (mx / sm) >= area_accuracy_threshold else sm - mx
 
 
 class StateManipulator:
@@ -41,6 +40,9 @@ class StateManipulator:
 
         # how much we increase selected angle (to selected dimension)
         self.pi_fraction = self.hyperplane_config.get_rotation_fraction()
+
+        self.area_accuracy = self.hyperplane_config.get_area_accuracy()
+        self.total_accuracy = self.hyperplane_config.get_total_accuracy()
 
         # we encode each action as two consequence numbers for up and down direction (both angle and translation)
         # for hyperplane x if we decide to increase angle to the dimension y we get action
@@ -107,7 +109,14 @@ class StateManipulator:
 
         count = 0
         for key, value in areas.items():
-            count -= calculate_miss(value)
+            count -= calculate_miss(value, self.area_accuracy)
+
+        # self.stats()
+        total_instances = sides.shape[0]
+        accuracy = (total_instances - abs(count)) / sides.shape[0]
+        if accuracy > self.total_accuracy:
+            print('Total accuracy {}, configured {}. Finished!!!!'.format(accuracy, self.total_accuracy))
+            count = 0
 
         if self.best_reward is None or self.best_reward < count:
             self.best_reward = count
@@ -117,7 +126,6 @@ class StateManipulator:
             self.best_areas = areas
             self.print_state('Best reward [{}]'.format(self.best_reward))
 
-        # self.stats()
         return count
 
     def stats(self):

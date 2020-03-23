@@ -9,6 +9,9 @@ from keras.models import Sequential
 from keras.optimizers import Adam
 
 import gym_hyperplanes.states.hyperplanes_state as hs
+from gym_hyperplanes.iris.iris_data_provider import IrisDataProvider
+from gym_hyperplanes.pendigits.pen_data_provider import PenDataProvider
+from gym_hyperplanes.states.state_calc import StateManipulator
 
 
 class DQN:
@@ -96,9 +99,9 @@ def main():
     np.random.seed(123)
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
-    # env.set_state_manipulator(StateManipulator(IrisDataProvider()))
+    env.set_state_manipulator(StateManipulator(IrisDataProvider()))
     # env.set_state_manipulator(StateManipulator(PenDataProvider()))
-    env.set_state_manipulator()
+    # env.set_state_manipulator()
 
     episod_len = 1000000
 

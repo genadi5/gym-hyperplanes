@@ -1,4 +1,5 @@
 import math
+import sys
 
 import numpy as np
 from gekko import GEKKO
@@ -51,11 +52,14 @@ def find_closest_point(point, required_class):
         results = []
 
         for i, constraints_set in enumerate(constraints_sets):
-            m = GEKKO(remote=False)  # Initialize gekko
-            vars = generate_vars_objective(m, number_of_features, 0, 0, 100, point)
-            generate_constraints(m, vars, constraints_set.get_constraints())
-            m.solve(disp=False)  # Solve
-            results.append(([var.value for var in vars], m.options.objfcnval))
+            try:
+                m = GEKKO(remote=False)  # Initialize gekko
+                vars = generate_vars_objective(m, number_of_features, 0, 0, 100, point)
+                generate_constraints(m, vars, constraints_set.get_constraints())
+                m.solve(disp=False)  # Solve
+                results.append(([var.value for var in vars], m.options.objfcnval))
+            except:
+                print('Error: ', sys.exc_info()[1])
 
         print("Result: " + str(results))
         min_distance = 0
@@ -73,8 +77,8 @@ def find_closest_point(point, required_class):
 
 
 def main():
-    required_class = 1
-    point = find_closest_point([41, 37], required_class)
+    required_class = 'Iris-versicolor'
+    point = find_closest_point([4.4, 2.9, 1.4, 0.2], required_class)
     print(point)
 
 
