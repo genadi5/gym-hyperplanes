@@ -15,7 +15,7 @@ MAX_HYPERPLANES = 20
 
 
 class StateManipulator:
-    def __init__(self, data_provider=TestDataProvider(), hyperplane_config=HyperplaneConfig()):
+    def __init__(self, data_provider, hyperplane_config=HyperplaneConfig()):
         """
         If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take
         X + 1 - for X angles on each dimension/features plus 1 for to/from origin

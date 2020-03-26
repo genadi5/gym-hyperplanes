@@ -45,7 +45,7 @@ def generate_constraints(m, vars, hyperplane_constraints):
 
 
 def find_closest_point(point, required_class):
-    hp_state = hs.load_hyperplanes_state('/downloads/hyperplanes/result.txt')
+    hp_state = hs.load_hyperplanes_state('/downloads/hyperplanes/IRIS_result.txt')
 
     classifier = HyperplanesClassifier(hp_state)
     y = classifier.predict(np.array([point]))

@@ -5,6 +5,9 @@ class DataProvider:
     def __init__(self):
         pass
 
+    def get_name(self):
+        pass
+
     def get_features_size(self):
         pass
 
@@ -40,6 +43,9 @@ class TestDataProvider(DataProvider):
             #  [40, 90, 1], [70, 90, 1],
             #  [90, 10, 1], [90, 30, 1]]
         )
+
+    def get_name(self):
+        return 'test'
 
     def get_features_size(self):
         return self.data.shape[1] - 1

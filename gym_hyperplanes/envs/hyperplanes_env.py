@@ -14,8 +14,8 @@ class HyperPlanesEnv(gym.Env):
         self.total_action_time = 0
         self.total_reward_time = 0
 
-    def set_state_manipulator(self, state_manipulator=None):
-        self.state_manipulator = state_manipulator if state_manipulator is not None else StateManipulator()
+    def set_state_manipulator(self, state_manipulator):
+        self.state_manipulator = state_manipulator
 
     def get_hp_state(self):
         return self.state_manipulator.get_hp_state()

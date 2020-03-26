@@ -11,6 +11,7 @@ from keras.optimizers import Adam
 import gym_hyperplanes.states.hyperplanes_state as hs
 from gym_hyperplanes.iris.iris_data_provider import IrisDataProvider
 from gym_hyperplanes.pendigits.pen_data_provider import PenDataProvider
+from gym_hyperplanes.states.data_provider import TestDataProvider
 from gym_hyperplanes.states.state_calc import StateManipulator
 
 
@@ -99,9 +100,10 @@ def main():
     np.random.seed(123)
 
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
-    env.set_state_manipulator(StateManipulator(IrisDataProvider()))
-    # env.set_state_manipulator(StateManipulator(PenDataProvider()))
-    # env.set_state_manipulator()
+    # provider = IrisDataProvider()
+    provider = PenDataProvider()
+    # provider = TestDataProvider()
+    env.set_state_manipulator(StateManipulator(provider))
 
     episod_len = 1000000
 
@@ -189,7 +191,7 @@ def main():
     env.print_state('Finished in [{}] steps in [{}] secs'.format(step, stop - start))
 
     hp_state = env.get_hp_state()
-    hs.save_hyperplanes_state(hp_state, '/downloads/hyperplanes/result.txt')
+    hs.save_hyperplanes_state(hp_state, '/downloads/hyperplanes/{}_result.txt'.format(provider.get_name()))
 
 
 if __name__ == "__main__":
