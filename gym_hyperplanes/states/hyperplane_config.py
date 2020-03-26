@@ -3,9 +3,8 @@ class HyperplaneConfig:
         self.hyperplanes = 5
         self.pi_fraction = 12  # pi / self.pi_fraction
         self.area_accuracy = 0.9
-        self.total_accuracy = 0.9
-        print('hyperplanes {} with rotation fraction {}, area_accuracy {}, total_accuracy {}'
-              .format(self.hyperplanes, self.pi_fraction, self.area_accuracy, self.total_accuracy))
+        print('hyperplanes {} with rotation fraction {}, area_accuracy {}'.format(self.hyperplanes, self.pi_fraction,
+                                                                                  self.area_accuracy))
 
     def get_hyperplanes(self):
         return self.hyperplanes
@@ -15,6 +14,3 @@ class HyperplaneConfig:
 
     def get_area_accuracy(self):
         return self.area_accuracy
-
-    def get_total_accuracy(self):
-        return self.total_accuracy

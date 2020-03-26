@@ -27,6 +27,8 @@ class DataSetProvider(DataProvider):
             min_value = 0
         max_value = max_value + ((max_value - min_value) * self.distance_from_origin_delta_percents) / 100
 
+        # thinking that all features are homogenious we assume that their values have approximately
+        # same range
         self.max_distance_from_origin = math.sqrt(pow(max_value, 2) * self.only_data.shape[1])
         self.min_distance_from_origin = min_value  # calculate - actually we should be able to move from - to +
 

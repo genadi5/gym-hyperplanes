@@ -14,13 +14,6 @@ PRECISION = 0.000001
 MAX_HYPERPLANES = 20
 
 
-def calculate_miss(classes, area_accuracy_threshold=1):
-    sm = sum(classes.values())
-    mx = max(classes.values())
-
-    return 0 if (mx / sm) >= area_accuracy_threshold else sm - mx
-
-
 class StateManipulator:
     def __init__(self, data_provider=TestDataProvider(), hyperplane_config=HyperplaneConfig()):
         """
@@ -42,7 +35,6 @@ class StateManipulator:
         self.pi_fraction = self.hyperplane_config.get_rotation_fraction()
 
         self.area_accuracy = self.hyperplane_config.get_area_accuracy()
-        self.total_accuracy = self.hyperplane_config.get_total_accuracy()
 
         # we encode each action as two consequence numbers for up and down direction (both angle and translation)
         # for hyperplane x if we decide to increase angle to the dimension y we get action
@@ -107,26 +99,23 @@ class StateManipulator:
             areas[key] = cls
         # self.total_areas += (round(time.time()) - start_areas)
 
-        count = 0
+        count_area_misses = 0
         for key, value in areas.items():
-            count -= calculate_miss(value, self.area_accuracy)
+            sm = sum(value.values())
+            mx = max(value.values())
+            count_area_misses -= 0 if (mx / sm) >= self.area_accuracy else sm - mx
 
         # self.stats()
-        total_instances = sides.shape[0]
-        accuracy = (total_instances - abs(count)) / sides.shape[0]
-        if accuracy > self.total_accuracy:
-            print('Total accuracy {}, configured {}. Finished!!!!'.format(accuracy, self.total_accuracy))
-            count = 0
 
-        if self.best_reward is None or self.best_reward < count:
-            self.best_reward = count
+        if self.best_reward is None or self.best_reward < count_area_misses:
+            self.best_reward = count_area_misses
             self.best_hp_state = np.copy(self.hp_state)
             self.best_hp_dist = np.copy(self.hp_dist)
             self.best_state = np.copy(self.state)
             self.best_areas = areas
             self.print_state('Best reward [{}]'.format(self.best_reward))
 
-        return count
+        return count_area_misses
 
     def stats(self):
         if self.actions_done % 10 == 0:
@@ -259,8 +248,12 @@ class StateManipulator:
         self.hp_dist = np.zeros([self.hyperplanes])
 
         self.hp_state[:, :] = math.sqrt(1 / self.features)
+
+        times_each_hyperplane_to_translate = math.floor(
+            (100 / (self.hyperplanes + 1)) / self.dist_from_origin_delta_percents)
+
         for i in range(0, self.hyperplanes):
-            for j in range(1, i + 1):
+            for j in range((i + 1) * times_each_hyperplane_to_translate):
                 self.apply_translation(i, UP)
         self.copy_state()
 

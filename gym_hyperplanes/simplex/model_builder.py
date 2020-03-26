@@ -18,6 +18,7 @@ def generate_vars_objective(m, number_of_features, value, lb, ub, point):
             objective = (var - point[i]) * (var - point[i])
         else:
             objective = objective + (var - point[i]) * (var - point[i])
+    print('Objective:[{}]'.format(objective))
     m.Obj(objective)  # Objective
     return vars
 
@@ -31,9 +32,16 @@ def generate_constraints(m, vars, hyperplane_constraints):
             else:
                 constraint = constraint + coefficient * vars[i]
         if hyperplane_constraint.get_sign() == '<':
-            m.Equation(constraint < hyperplane_constraint.get_d())
+            constraint = constraint < hyperplane_constraint.get_d()
         else:
-            m.Equation(constraint >= hyperplane_constraint.get_d())
+            constraint = constraint >= hyperplane_constraint.get_d()
+        m.Equation(constraint)
+        print('Eq:[{}]'.format(constraint))
+
+    for var in vars:
+        constraint = var >= 0
+        m.Equation(constraint)
+        print('Eq:[{}]'.format(constraint))
 
 
 def find_closest_point(point, required_class):
@@ -54,7 +62,7 @@ def find_closest_point(point, required_class):
         for i, constraints_set in enumerate(constraints_sets):
             try:
                 m = GEKKO(remote=False)  # Initialize gekko
-                vars = generate_vars_objective(m, number_of_features, 0, 0, 100, point)
+                vars = generate_vars_objective(m, number_of_features, 0, 0, 8, point)
                 generate_constraints(m, vars, constraints_set.get_constraints())
                 m.solve(disp=False)  # Solve
                 results.append(([var.value for var in vars], m.options.objfcnval))
