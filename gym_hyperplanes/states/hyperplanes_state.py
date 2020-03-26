@@ -49,7 +49,7 @@ class HyperplanesState:
         for class_area in class_areas:
             constraints = []
             for i in range(self.hp_state.shape[1]):
-                sign = '<' if class_area & 1 << i > 0 else '>'
+                sign = '>' if class_area & 1 << i > 0 else '<'
                 constraints.append(HyperplaneConstraint(self.hp_state[:, i], self.hp_dist[i], sign))
             constraint_sets.append(HyperplaneConstraintSet(constraints))
         return constraint_sets

@@ -65,7 +65,7 @@ def find_closest_point(point, required_class):
                 vars = generate_vars_objective(m, number_of_features, 0, 0, 8, point)
                 generate_constraints(m, vars, constraints_set.get_constraints())
                 m.solve(disp=False)  # Solve
-                results.append(([var.value for var in vars], m.options.objfcnval))
+                results.append(([var.value[0] for var in vars], m.options.objfcnval))
             except:
                 print('Error: ', sys.exc_info()[1])
 
@@ -74,9 +74,9 @@ def find_closest_point(point, required_class):
         for result, constraints in zip(results, constraints_sets):
             if the_closest_point is None:
                 the_closest_point = result
-                min_distance = math.sqrt(sum(map(lambda x: x.value[0] * x.value[0], result[0])))
+                min_distance = math.sqrt(sum(map(lambda x: x * x, result[0])))
             else:
-                distance = math.sqrt(sum(map(lambda x: x.value[0] * x.value[0], result[0])))
+                distance = math.sqrt(sum(map(lambda x: x * x, result[0])))
                 if distance < min_distance:
                     min_distance = distance
                     the_closest_point = result
@@ -85,9 +85,9 @@ def find_closest_point(point, required_class):
 
 
 def main():
-    required_class = 'Iris-versicolor'
-    point = find_closest_point([4.4, 2.9, 1.4, 0.2], required_class)
-    print(point)
+    required_class = 'Iris-virginica'
+    result = find_closest_point([4.4, 2.9, 1.4, 0.2], required_class)
+    print(result)
 
 
 if __name__ == "__main__":

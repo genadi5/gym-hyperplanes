@@ -79,11 +79,11 @@ def test5():
     x3 = m.Var(value=0, lb=0, ub=10)
     x4 = m.Var(value=0, lb=0, ub=10)
 
-    m.Equation(-0.77 * x1 - 0.64 * x2 - 0 * x3 + 0 * x4 >= 6.3)
-    m.Equation(0 * x1 - 0.11 * x2 - 0 * x3 + 0.99 * x4 < -0.315)
-    m.Equation(-0.43 * x1 - 0.3132 * x2 - 0.431 * x3 - 0.73 * x4 >= 0)
-    m.Equation(0.15 * x1 + 0.15 * x2 + 0.15 * x3 + 0.966 * x4 >= 3.465)
-    m.Equation(0.593 * x1 + 0.44776 * x2 + 0.31 * x3 + 0.59 * x4 < 5.985)
+    m.Equation(-0.77 * x1 - 0.64 * x2 - 0 * x3 + 0 * x4 < 6.3)
+    m.Equation(0 * x1 - 0.11 * x2 - 0 * x3 + 0.99 * x4 >= -0.315)
+    m.Equation(-0.43 * x1 - 0.3132 * x2 - 0.431 * x3 - 0.73 * x4 < 0)
+    m.Equation(0.15 * x1 + 0.15 * x2 + 0.15 * x3 + 0.966 * x4 < 3.465)
+    m.Equation(0.593 * x1 + 0.44776 * x2 + 0.31 * x3 + 0.59 * x4 >= 5.985)
 
     m.Equation(x1 >= 0)
     m.Equation(x2 >= 0)

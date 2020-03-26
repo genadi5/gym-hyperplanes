@@ -74,15 +74,28 @@ class StateManipulator:
         return self.state
 
     def calculate_reward(self):
-        areas = dict()
+        areas, count_area_misses = self._calculate_ratio()
 
+        # self.stats()
+
+        if self.best_reward is None or self.best_reward < count_area_misses:
+            self.best_reward = count_area_misses
+            self.best_hp_state = np.copy(self.hp_state)
+            self.best_hp_dist = np.copy(self.hp_dist)
+            self.best_state = np.copy(self.state)
+            self.best_areas = areas
+            self.print_state('Best reward [{}]'.format(self.best_reward))
+
+        return count_area_misses
+
+    def _calculate_ratio(self):
+        areas = dict()
         # calculate value of instances per hyperplane
         calc = np.dot(self.data_provider.get_data(), self.hp_state)
         # find whether it is above or below it
         signs = calc - self.hp_dist
         # transform it to true/false - meaning below or above
         sides = (signs > 0).astype(int)
-
         # start_areas = round(time.time())
         for i, side in enumerate(sides):
             key = 0
@@ -98,24 +111,12 @@ class StateManipulator:
                 cls[label] = 1
             areas[key] = cls
         # self.total_areas += (round(time.time()) - start_areas)
-
         count_area_misses = 0
         for key, value in areas.items():
             sm = sum(value.values())
             mx = max(value.values())
             count_area_misses -= 0 if (mx / sm) >= self.area_accuracy else sm - mx
-
-        # self.stats()
-
-        if self.best_reward is None or self.best_reward < count_area_misses:
-            self.best_reward = count_area_misses
-            self.best_hp_state = np.copy(self.hp_state)
-            self.best_hp_dist = np.copy(self.hp_dist)
-            self.best_state = np.copy(self.state)
-            self.best_areas = areas
-            self.print_state('Best reward [{}]'.format(self.best_reward))
-
-        return count_area_misses
+        return areas, count_area_misses
 
     def stats(self):
         if self.actions_done % 10 == 0:
