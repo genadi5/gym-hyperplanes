@@ -2,9 +2,9 @@ import math
 
 import numpy as np
 
-from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
+from gym_hyperplanes.states.missed_areas import MissedAreas
 
 UP = 1
 DOWN = -1
@@ -24,22 +24,26 @@ class Counter:
         self.counter += 1
 
 
+def make_area(array, powers):
+    return np.bitwise_or.reduce(powers[array > 0])
+
+
 def calculate_areas(array, powers, areas, data_provider, counter):
-    key = np.bitwise_or.reduce(powers[array > 0])
-    cls = dict() if key not in areas else areas[key]
+    area = make_area(array, powers)
+    cls = dict() if area not in areas else areas[area]
     # we add all classes we found in the area
     label = data_provider.get_label(counter.get())
     if label in cls:
         cls[label] = cls[label] + 1
     else:
         cls[label] = 1
-    areas[key] = cls
+    areas[area] = cls
     # print('row [{}] classes [{}]'.format(counter.get(), cls))
     counter.inc()
 
 
 class StateManipulator:
-    def __init__(self, data_provider, hyperplane_config=HyperplaneConfig()):
+    def __init__(self, data_provider, hyperplane_config):
         """
         If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take
         X + 1 - for X angles on each dimension/features plus 1 for to/from origin
@@ -70,7 +74,7 @@ class StateManipulator:
 
         self.hp_max_distance_from_origin = self.data_provider.get_max_distance_from_origin()
         self.hp_min_distance_from_origin = self.data_provider.get_min_distance_from_origin()
-        self.dist_from_origin_delta_percents = self.data_provider.get_distance_from_origin_delta_percents()
+        self.dist_from_origin_delta_percents = self.hyperplane_config.get_from_origin_delta_percents()
 
         # alls hyperplane positions are concatenated in one array
         self.state = np.zeros(self.hyperplanes * (self.features + 1))
@@ -93,8 +97,25 @@ class StateManipulator:
 
         self.actions_done = 0
 
-    def get_hp_state(self):
-        return HyperplanesState(self.best_hp_state, self.best_hp_dist, self.best_areas, self.best_reward)
+    def get_hp_state(self, complete):
+        copy_best_areas = dict(self.best_areas)
+        missed_areas = {}
+        if not complete:
+            signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
+            areas = np.apply_along_axis(make_area, 1, signs, self.powers)
+            for area, value in self.best_areas.items():
+                sm = sum(value.values())
+                mx = max(value.values())
+                if ((mx * 100) / sm) < self.area_accuracy:
+                    area_data = self.data_provider.get_data()[areas == area]
+                    missed_areas[area] = area_data
+                    copy_best_areas.pop(area, None)
+        return MissedAreas(missed_areas, self.best_hp_state, self.best_hp_dist), \
+               None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state,
+                                                                       self.best_hp_dist, copy_best_areas,
+                                                                       self.best_reward,
+                                                                       self.data_provider.get_features_minimums(),
+                                                                       self.data_provider.get_features_maximums())
 
     def get_state(self):
         return self.state
@@ -117,7 +138,7 @@ class StateManipulator:
     def _calculate_ratio(self):
         areas = dict()
         # calculate value of instances per hyperplane
-        signs = np.dot(self.data_provider.get_data(), self.hp_state) - self.hp_dist
+        signs = np.dot(self.data_provider.get_only_data(), self.hp_state) - self.hp_dist
         row_counter = Counter()
         keys = np.apply_along_axis(calculate_areas, 1, signs, self.powers, areas, self.data_provider, row_counter)
 
@@ -126,7 +147,7 @@ class StateManipulator:
         for key, value in areas.items():
             sm = sum(value.values())
             mx = max(value.values())
-            count_area_misses -= 0 if (mx / sm) >= self.area_accuracy else sm - mx
+            count_area_misses -= 0 if ((mx * 100) / sm) >= self.area_accuracy else sm - mx
         return areas, count_area_misses
 
     def stats(self):

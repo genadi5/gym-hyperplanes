@@ -12,8 +12,16 @@ def load_hyperplanes_state(file_path):
         return pickle.load(handle)
 
 
+def create_area_constraints(class_area, hp_state, hp_dist):
+    constraints = []
+    for i in range(hp_state.shape[1]):
+        sign = '>' if class_area & 1 << i > 0 else '<'
+        constraints.append(HyperplaneConstraint(hp_state[:, i], hp_dist[i], sign))
+    return constraints
+
+
 class HyperplanesState:
-    def __init__(self, hp_state, hp_dist, areas_to_classes, reward):
+    def __init__(self, hp_state, hp_dist, areas_to_classes, reward, features_minimums, features_maximums):
         self.hp_state = hp_state
         self.hp_dist = hp_dist
         self.areas_to_classes = areas_to_classes
@@ -24,6 +32,17 @@ class HyperplanesState:
             class_areas.add(area)
             self.classes_to_areas[cls] = class_areas
         self.reward = reward
+        self.features_minimums = features_minimums
+        self.features_maximums = features_maximums
+
+        self.external_hp_state = None
+        self.external_hp_dist = None
+        self.external_class_area = None
+
+    def set_external_boundaries(self, external_hp_state, external_hp_dist, external_class_area):
+        self.external_hp_state = external_hp_state
+        self.external_hp_dist = external_hp_dist
+        self.external_class_area = external_class_area
 
     def get_hp_state(self):
         return self.hp_state
@@ -37,9 +56,6 @@ class HyperplanesState:
     def get_reward(self):
         return self.reward
 
-    def number_of_features(self):
-        return self.hp_state.shape[0]
-
     def get_class_constraint(self, cls):
         if cls not in self.classes_to_areas:
             return []
@@ -47,12 +63,19 @@ class HyperplanesState:
 
         constraint_sets = []
         for class_area in class_areas:
-            constraints = []
-            for i in range(self.hp_state.shape[1]):
-                sign = '>' if class_area & 1 << i > 0 else '<'
-                constraints.append(HyperplaneConstraint(self.hp_state[:, i], self.hp_dist[i], sign))
-            constraint_sets.append(HyperplaneConstraintSet(constraints))
+            cs = create_area_constraints(class_area, self.hp_state, self.hp_dist)
+            constraint_sets.append(HyperplaneConstraintSet(cs))
+
+        if self.external_class_area is not None:
+            cs = create_area_constraints(self.external_class_area, self.external_hp_state, self.external_hp_dist)
+            constraint_sets.append(HyperplaneConstraintSet(cs))
         return constraint_sets
+
+    def get_features_minimums(self):
+        return self.features_minimums
+
+    def get_features_maximums(self):
+        return self.features_maximums
 
 
 class HyperplaneConstraint:
