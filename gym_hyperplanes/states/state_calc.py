@@ -2,7 +2,6 @@ import math
 
 import numpy as np
 
-from gym_hyperplanes.states.data_provider import TestDataProvider
 from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
@@ -56,6 +55,8 @@ class StateManipulator:
         # the 'right' part of hyperplane equality
         self.hp_dist = np.zeros([self.hyperplanes])
 
+        self.powers = np.array([pow(2, i) for i in range(self.hyperplanes)])
+
         # we always store best results
         self.best_hp_state = None
         self.best_hp_dist = None
@@ -91,17 +92,14 @@ class StateManipulator:
     def _calculate_ratio(self):
         areas = dict()
         # calculate value of instances per hyperplane
-        calc = np.dot(self.data_provider.get_data(), self.hp_state)
+        signs = np.dot(self.data_provider.get_data(), self.hp_state) - self.hp_dist
         # find whether it is above or below it
-        signs = calc - self.hp_dist
+        # signs = calc - self.hp_dist
         # transform it to true/false - meaning below or above
-        sides = (signs > 0).astype(int)
+        # sides = (signs > 0).astype(int)
         # start_areas = round(time.time())
-        for i, side in enumerate(sides):
-            key = 0
-            for k, val in enumerate(side):
-                if val:
-                    key |= 1 << k
+        for i, sign in enumerate(signs):
+            key = np.bitwise_or.reduce(self.powers[sign > 0])
             cls = dict() if key not in areas else areas[key]
             # we add all classes we found in the area
             label = self.data_provider.get_label(i)
