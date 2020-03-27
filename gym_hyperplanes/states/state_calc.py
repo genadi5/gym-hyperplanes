@@ -13,6 +13,31 @@ PRECISION = 0.000001
 MAX_HYPERPLANES = 20
 
 
+class Counter:
+    def __init__(self):
+        self.counter = 0
+
+    def get(self):
+        return self.counter
+
+    def inc(self):
+        self.counter += 1
+
+
+def calculate_areas(array, powers, areas, data_provider, counter):
+    key = np.bitwise_or.reduce(powers[array > 0])
+    cls = dict() if key not in areas else areas[key]
+    # we add all classes we found in the area
+    label = data_provider.get_label(counter.get())
+    if label in cls:
+        cls[label] = cls[label] + 1
+    else:
+        cls[label] = 1
+    areas[key] = cls
+    # print('row [{}] classes [{}]'.format(counter.get(), cls))
+    counter.inc()
+
+
 class StateManipulator:
     def __init__(self, data_provider, hyperplane_config=HyperplaneConfig()):
         """
@@ -93,21 +118,9 @@ class StateManipulator:
         areas = dict()
         # calculate value of instances per hyperplane
         signs = np.dot(self.data_provider.get_data(), self.hp_state) - self.hp_dist
-        # find whether it is above or below it
-        # signs = calc - self.hp_dist
-        # transform it to true/false - meaning below or above
-        # sides = (signs > 0).astype(int)
-        # start_areas = round(time.time())
-        for i, sign in enumerate(signs):
-            key = np.bitwise_or.reduce(self.powers[sign > 0])
-            cls = dict() if key not in areas else areas[key]
-            # we add all classes we found in the area
-            label = self.data_provider.get_label(i)
-            if label in cls:
-                cls[label] = cls[label] + 1
-            else:
-                cls[label] = 1
-            areas[key] = cls
+        row_counter = Counter()
+        keys = np.apply_along_axis(calculate_areas, 1, signs, self.powers, areas, self.data_provider, row_counter)
+
         # self.total_areas += (round(time.time()) - start_areas)
         count_area_misses = 0
         for key, value in areas.items():
