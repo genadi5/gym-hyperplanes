@@ -8,7 +8,6 @@ from gym_hyperplanes.states.missed_areas import MissedAreas
 
 UP = 1
 DOWN = -1
-np.random.seed(123)
 PRECISION = 0.000001
 MAX_HYPERPLANES = 20
 

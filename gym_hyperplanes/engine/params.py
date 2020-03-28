@@ -5,6 +5,7 @@ from configparser import ConfigParser
 
 DATA_NAME = 'test_' + time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_').replace(':', '_').replace('-', '_')
 DATA_FILE = None
+MODEL_FOLDER = None
 ITERATIONS = 5
 ACCURACY = 90
 PI_FRACTION = 12
@@ -18,10 +19,13 @@ STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PA
 def load_params():
     global DATA_FILE
     global DATA_NAME
+    global MODEL_FOLDER
+
     global STEPS
     global STEPS_NO_REWARD_IMPROVEMENTS_PART
     global STEPS_NO_REWARD_IMPROVEMENTS
     global ITERATIONS
+
     global HYPERPLANES
     global ACCURACY
     global PI_FRACTION
@@ -44,9 +48,12 @@ def load_params():
                         help="Pi fraction for hyperplane rotation")
     parser.add_argument("-o", "--distance_delta_from_origin", dest="distance_delta_from_origin", default=5,
                         help="Distance delta in percents of hyperplane movement in values range")
+    parser.add_argument("-m", "--model_output_folder", dest="model_folder", help="Model output folder")
     args = parser.parse_args()
     DATA_FILE = args.file
     DATA_NAME = args.name
+    MODEL_FOLDER = args.model_folder
+
     STEPS = int(args.episode_steps)
     STEPS_NO_REWARD_IMPROVEMENTS_PART = int(args.no_improvement_in_reward)
     STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
@@ -62,6 +69,8 @@ def load_params():
             DATA_FILE = config.get('DATA', 'data_file')
         if config.has_option('DATA', 'data_name'):
             DATA_NAME = config.get('DATA', 'data_name')
+        if config.has_option('DATA', 'model_folder'):
+            MODEL_FOLDER = config.get('DATA', 'model_folder')
 
         if config.has_option('EXECUTION', 'steps'):
             STEPS = int(config.get('EXECUTION', 'steps'))

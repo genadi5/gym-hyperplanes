@@ -70,4 +70,4 @@ def execute():
               format(iteration, round(time.time() - start), len(executions), data_size_to_process))
 
     print('@@@@@@@@@@@@@ Finished execution in [{}]'.format(round(time.time() - start)))
-    hs.save_hyperplanes_state(hp_states, '/downloads/hyperplanes/{}_result.txt'.format(execution_name))
+    hs.save_hyperplanes_state(hp_states, pm.MODEL_FOLDER + '{}_result.txt'.format(execution_name))

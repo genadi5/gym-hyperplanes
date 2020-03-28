@@ -5,7 +5,7 @@ import numpy as np
 
 from gym_hyperplanes.engine.dqn import DQN
 
-np.random.seed(123)
+np.random.seed(round(time.time()) % 1000000)
 
 
 def execute_hyperplane_search(state_manipulator, config):

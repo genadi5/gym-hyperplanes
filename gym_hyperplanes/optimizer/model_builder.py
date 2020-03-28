@@ -3,15 +3,14 @@ import math
 import numpy as np
 from gekko import GEKKO
 
-import gym_hyperplanes.states.hyperplanes_state as hs
 from gym_hyperplanes.classifiers.hyperplanes_classifier import HyperplanesClassifier
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
     vars = []
     objective = None
-    for i in range(features_minimums.shape[1]):
-        var = m.Var(value=features_minimums[i], lb=features_minimums[i], ub=features_maximums[i])
+    for i, min in enumerate(features_minimums):
+        var = m.Var(value=min, lb=min, ub=features_maximums[i])
         vars.append(var)
         if objective is None:
             objective = (var - point[i]) * (var - point[i])
@@ -80,21 +79,3 @@ def find_closest_point(point, required_class, hp_states):
                         the_closest_point = result
 
     return the_closest_point
-
-
-def main():
-    hp_states = hs.load_hyperplanes_state('/downloads/hyperplanes/test_result.txt')
-    required_class = 1
-    point = [40, 40]
-    # hp_states = hs.load_hyperplanes_state('/downloads/hyperplanes/IRIS_result.txt')
-    # required_class = 'Iris-virginica'
-    # point = [4.4, 2.9, 1.4, 0.2]
-    # hp_states = hs.load_hyperplanes_state('/downloads/hyperplanes/PEN_DIGITS_result.txt')
-    # required_class = '8'
-    # point = [74, 87, 31, 100, 0, 69, 62, 64, 100, 79, 100, 38, 84, 0, 18, 1]
-    result = find_closest_point(point, required_class, hp_states)
-    print(result)
-
-
-if __name__ == "__main__":
-    main()
