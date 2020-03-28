@@ -92,6 +92,7 @@ class StateManipulator:
         self.best_state = None
         self.best_areas = None
         self.best_reward = None
+        self.best_reward_worst_accuracy = None
 
         self.total_areas = 0
 
@@ -121,12 +122,13 @@ class StateManipulator:
         return self.state
 
     def calculate_reward(self):
-        areas, count_area_misses = self._calculate_ratio()
+        areas, count_area_misses, best_reward_worst_accuracy = self._calculate_ratio()
 
         # self.stats()
 
         if self.best_reward is None or self.best_reward < count_area_misses:
             self.best_reward = count_area_misses
+            self.best_reward_worst_accuracy = round(best_reward_worst_accuracy)
             self.best_hp_state = np.copy(self.hp_state)
             self.best_hp_dist = np.copy(self.hp_dist)
             self.best_state = np.copy(self.state)
@@ -143,12 +145,16 @@ class StateManipulator:
         keys = np.apply_along_axis(calculate_areas, 1, signs, self.powers, areas, self.data_provider, row_counter)
 
         # self.total_areas += (round(time.time()) - start_areas)
+        the_worst_accuracy = None
         count_area_misses = 0
         for key, value in areas.items():
             sm = sum(value.values())
             mx = max(value.values())
-            count_area_misses -= 0 if ((mx * 100) / sm) >= self.area_accuracy else sm - mx
-        return areas, count_area_misses
+            worst_accuracy = ((mx * 100) / sm)
+            if the_worst_accuracy is None or the_worst_accuracy > worst_accuracy:
+                the_worst_accuracy = worst_accuracy
+            count_area_misses -= 0 if worst_accuracy >= self.area_accuracy else sm - mx
+        return areas, count_area_misses, the_worst_accuracy
 
     def stats(self):
         if self.actions_done % 10 == 0:
@@ -294,9 +300,10 @@ class StateManipulator:
 
     def print_state(self, title):
         print('+++++{}+++++++++++++++++++++++++++'.format(title))
-        print(self.build_state(self.best_state, 'best state:'))
+        # print(self.build_state(self.best_state, 'best state:'))
         print('best areas:' + str(self.best_areas))
-        print('best reward:' + str(self.best_reward))
+        print('best reward {} with worst accuracy {}, data size [{}]:'.
+              format(self.best_reward, self.best_reward_worst_accuracy, self.data_provider.get_data_size()))
         print('***********************************************')
 
     def build_state(self, state, name):

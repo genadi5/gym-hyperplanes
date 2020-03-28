@@ -55,8 +55,8 @@ def execute_hyperplane_search(state_manipulator, config):
 
         if step % 1000 == 0:
             now = round(time.time())
-            print('{} steps in {} secs, {} best reward step, {} best reward'.
-                  format(step, now - last_period, best_reward_step_mark, best_reward))
+            print('{} steps in {} secs, overall {} secs, {} best reward step, {} best reward'.
+                  format(step, now - last_period, start - last_period, best_reward_step_mark, best_reward))
             last_period = now
         step += 1
 

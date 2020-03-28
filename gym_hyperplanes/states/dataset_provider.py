@@ -1,22 +1,18 @@
 import math
-import os.path
 
 import numpy as np
 import pandas as pd
-from sklearn import datasets
 
 from gym_hyperplanes.states.data_provider import DataProvider
 
 
 class DataSetProvider(DataProvider):
-    def __init__(self, hp_config, data=None):
+    def __init__(self, data_name, data_file, hp_config, data=None):
         super(DataSetProvider, self).__init__(hp_config)
+        self.data_name = data_name
+        self.data_file = data_file
         if data is None:
-            data_files = self.get_file_name()
-            if os.path.isfile(data_files):
-                self.data = pd.read_csv(data_files, header=None)
-            else:
-                self.data = datasets.load_iris()
+            self.data = pd.read_csv(self.data_file, header=None)
         else:
             self.data = data
 
@@ -39,13 +35,10 @@ class DataSetProvider(DataProvider):
 
         print('for {} min value {} and max value {} '.
               format(self.get_name(), self.min_distance_from_origin, self.max_distance_from_origin))
-        print('loaded {} instances from {}'.format(self.data.shape[0], self.get_file_name()))
+        print('loaded {} instances from {}'.format(self.data.shape[0], self.data_file))
 
     def get_name(self):
-        return None
-
-    def get_file_name(self):
-        return None
+        return self.data_name
 
     def get_features_size(self):
         return self.only_data.shape[1]

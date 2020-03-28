@@ -28,8 +28,9 @@ class DataProvider:
 
 
 class TestDataProvider(DataProvider):
-    def __init__(self, hp_config, data=None):
+    def __init__(self, data_name, hp_config, data=None):
         super(TestDataProvider, self).__init__(hp_config)
+        self.data_name = data_name
         if data is None:
             self.data = np.array(
                 [[1, 1, 1], [10, 10, 1], [10, 60, 2], [20, 70, 2], [60, 60, 1], [70, 70, 1], [70, 10, 2], [90, 10, 2]]
@@ -45,7 +46,7 @@ class TestDataProvider(DataProvider):
             self.data = data
 
     def get_name(self):
-        return 'test'
+        return self.data_name
 
     def get_features_size(self):
         return self.data.shape[1] - 1
