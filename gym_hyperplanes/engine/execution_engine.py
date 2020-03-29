@@ -51,13 +51,14 @@ def execute():
         done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
 
         data_size_to_process -= execution.get_data_size()
-        missed_areas, hp_state = state_manipulator.get_hp_state(done)
+
+        new_iteration = execution.get_deep_level() + 1
+        missed_areas, hp_state = state_manipulator.get_hp_state(done or new_iteration > pm.ITERATIONS)
         if hp_state is not None:
             hp_state.set_external_boundaries(execution.get_external_hp_state(),
                                              execution.get_external_hp_dist(), execution.get_external_area())
             hp_states.append(hp_state)
         if len(missed_areas.get_missed_areas()) > 0:
-            new_iteration = execution.get_deep_level() + 1
             if new_iteration > pm.ITERATIONS:
                 print('Reached max allowed iterations. Finished')
                 break

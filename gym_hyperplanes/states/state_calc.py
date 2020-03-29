@@ -106,7 +106,7 @@ class StateManipulator:
             for area, value in self.best_areas.items():
                 sm = sum(value.values())
                 mx = max(value.values())
-                if ((mx * 100) / sm) < self.area_accuracy:
+                if math.ceil((mx * 100) / sm) < self.area_accuracy:
                     area_data = self.data_provider.get_data()[areas == area]
                     missed_areas[area] = area_data
                     copy_best_areas.pop(area, None)
@@ -149,10 +149,10 @@ class StateManipulator:
         for key, value in areas.items():
             sm = sum(value.values())
             mx = max(value.values())
-            worst_accuracy = ((mx * 100) / sm)
-            if the_worst_accuracy is None or the_worst_accuracy > worst_accuracy:
-                the_worst_accuracy = worst_accuracy
-            count_area_misses -= 0 if worst_accuracy >= self.area_accuracy else sm - mx
+            curr_area_accuracy = math.ceil((mx * 100) / sm)
+            if the_worst_accuracy is None or the_worst_accuracy > curr_area_accuracy:
+                the_worst_accuracy = curr_area_accuracy
+            count_area_misses -= 0 if curr_area_accuracy >= self.area_accuracy else sm - mx
         return areas, count_area_misses, the_worst_accuracy
 
     def stats(self):

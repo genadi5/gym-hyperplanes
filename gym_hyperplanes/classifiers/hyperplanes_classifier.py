@@ -1,12 +1,24 @@
 import operator
 
 import numpy as np
+import pandas as pd
 
 import gym_hyperplanes.states.hyperplanes_state as hs
 
 
 def make_area(array, powers):
     return np.bitwise_or.reduce(powers[array > 0])
+
+
+def score(classifier, X, y):
+    pred = classifier.predict(X)
+
+    count = 0
+    for i in range(min(len(pred), len(y))):
+        if pred[i] == y[i]:
+            count += 1
+
+    return (count * 100) / max(len(pred), len(y))
 
 
 class HyperplanesClassifier:
@@ -31,18 +43,82 @@ class HyperplanesClassifier:
         return np.array(result)
 
     def score(self, X, y):
-        pred = self.predict(X)
+        return score(self, X, y)
 
-        count = 0
-        for i in range(min(len(pred), len(y))):
-            label_class_enum = self.hyperplane_state.get_class_enum(y[i])
-            if pred[i] == label_class_enum:
-                count += 1
-
-        return (count * 100) / max(len(pred), len(y))
+    def is_supported_class(self, required_class):
+        return self.hyperplane_state.is_supported_class(required_class)
 
 
-def main():
+class DeepHyperplanesClassifier:
+    def __init__(self, hp_states):
+        # we are looping in reverse to start from the most deep area since if point is inside deeper (narrow) area
+        # it for sure inside shallower (broader) area
+        self.classifiers = [HyperplanesClassifier(hp_state) for hp_state in reversed(hp_states)]
+
+    def predict(self, X, required_class=None):
+        y = np.array([None] * X.shape[0])
+        for classifier in self.classifiers:
+            if required_class is not None and not classifier.is_supported_class(required_class):
+                continue
+            cy = classifier.predict(X)
+
+            has_not_predicted = False
+            for i in range(y.shape[0]):
+                if y[i] is None:
+                    y[i] = cy[i]
+                    has_not_predicted = has_not_predicted or y[i] is None
+            # each state id is isolated areas (on it own deep level) so there can't be that same point will
+            # fall in several states
+            # thus once first classified it to required class  we finished
+            if not has_not_predicted:
+                break
+        return np.array(y)
+
+    def predict1(self, X, required_class=None):
+        y = np.array([None] * X.shape[0])
+        for classifier in self.classifiers:
+            if required_class is not None and not classifier.is_supported_class(required_class):
+                continue
+            cX = X[y == None]
+            cy = classifier.predict(cX)
+
+            none_index = 0
+            has_not_predicted = False
+            for i in range(y.shape[0]):
+                if y[i] is None:
+                    y[i] = cy[none_index]
+                    has_not_predicted = has_not_predicted or y[i] is None
+                    none_index += 1
+                    if none_index == cy.shape[0]:
+                        break
+            # each state id is isolated areas (on it own deep level) so there can't be that same point will
+            # fall in several states
+            # thus once first classified it to required class  we finished
+            if not has_not_predicted:
+                break
+        return np.array(y)
+
+    def score(self, X, y):
+        return score(self, X, y)
+
+
+def test_pendigits():
+    hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/iris_result_a95_h20_i10.txt')
+    # hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/pendigits_result_a95_h20_i10.txt')
+    classifier = DeepHyperplanesClassifier(hp_states)
+
+    # data_files = '/UP/Teza/classoptimizer/pendigits/pendigits.tra'
+    # data_files = '/UP/Teza/classoptimizer/pendigits/pendigits.tes'
+    data_files = '/UP/Teza/classoptimizer/iris/iris.data'
+    data = pd.read_csv(data_files, header=None)
+    X = data.iloc[:, :-1]
+    y = data.iloc[:, -1]
+
+    score = classifier.score(X, y)
+    print(score)
+
+
+def test():
     hp_state = hs.load_hyperplanes_state('/downloads/hyperplanes/result.txt')
     classifier = HyperplanesClassifier(hp_state)
     X = np.array([[20, 20], [40, 40], [80, 80]])
@@ -51,6 +127,10 @@ def main():
     score = classifier.score(X, y)
     print(pred)
     print(score)
+
+
+def main():
+    test_pendigits()
 
 
 if __name__ == "__main__":
