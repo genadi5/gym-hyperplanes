@@ -5,7 +5,7 @@ import gym_hyperplanes.states.hyperplanes_state as hs
 
 def execute():
     hp_states = hs.load_hyperplanes_state(pm.MODEL_FILE)
-    required_class = pm.REQUIRED_CLASS
+    required_class = hp_states[0].get_class_adapter()(pm.REQUIRED_CLASS)
     instance = pm.INSTANCE
     result = mb.find_closest_point(instance, required_class, hp_states)
     print(result)

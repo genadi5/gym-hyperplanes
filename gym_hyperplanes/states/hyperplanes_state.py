@@ -56,6 +56,13 @@ class HyperplanesState:
     def get_reward(self):
         return self.reward
 
+    def is_supported_class(self, cls):
+        return cls in self.classes_to_areas
+
+    def get_class_adapter(self):
+        for cls, _ in self.classes_to_areas.items():
+            return int if 'int' in str(type(cls)) else str
+
     def get_class_constraint(self, cls):
         if cls not in self.classes_to_areas:
             return []

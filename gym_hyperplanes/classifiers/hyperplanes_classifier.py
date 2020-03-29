@@ -5,9 +5,14 @@ import numpy as np
 import gym_hyperplanes.states.hyperplanes_state as hs
 
 
+def make_area(array, powers):
+    return np.bitwise_or.reduce(powers[array > 0])
+
+
 class HyperplanesClassifier:
     def __init__(self, hyperplane_state):
         self.hyperplane_state = hyperplane_state
+        self.powers = np.array([pow(2, i) for i in range(len(self.hyperplane_state.hp_dist))])
 
     def predict(self, X):
         calc = np.dot(X, self.hyperplane_state.hp_state)
@@ -17,13 +22,11 @@ class HyperplanesClassifier:
         result = []
 
         for i, side in enumerate(sides):
-            key = 0
-            for k, val in enumerate(side):
-                if val:
-                    key |= 1 << k
-            cls = 'UNKNOWN' if key not in self.hyperplane_state.areas_to_classes \
+            key = make_area(side, self.powers)
+            cls = None if key not in self.hyperplane_state.areas_to_classes \
                 else self.hyperplane_state.areas_to_classes[key]
-            result.append(max(cls.items(), key=operator.itemgetter(1))[0])
+            # if got None meaning it is out of area
+            result.append(None if cls is None else max(cls.items(), key=operator.itemgetter(1))[0])
 
         return np.array(result)
 
@@ -32,7 +35,8 @@ class HyperplanesClassifier:
 
         count = 0
         for i in range(min(len(pred), len(y))):
-            if pred[i] == y[i]:
+            label_class_enum = self.hyperplane_state.get_class_enum(y[i])
+            if pred[i] == label_class_enum:
                 count += 1
 
         return (count * 100) / max(len(pred), len(y))

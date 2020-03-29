@@ -43,18 +43,29 @@ def generate_constraints(m, vars, hyperplane_constraints):
 
 
 def find_closest_point(point, required_class, hp_states):
-    the_closest_point = None
-    for hp_state in hp_states:
-        # each state id is isolated areas so there can't be that same point will
+    # we are looping in reverse to start from the most deep area since if point is inside deeper (narrow) area
+    # it for sure inside shallower (broader) area
+    for hp_state in reversed(hp_states):
+        if not hp_state.is_supported_class(required_class):
+            continue
+        # each state id is isolated areas (on it own deep level) so there can't be that same point will
         # fall in several states
         # thus once first classified it to required class  we finished
         classifier = HyperplanesClassifier(hp_state)
         y = classifier.predict(np.array([point]))
-        if y[0] == required_class:
-            print('GREAT!!!!!!')
-            return point
-        else:
-            constraints_sets = hp_state.get_class_constraint(required_class)
+        if y[0] is not None: # we found area for point
+            if y[0] == required_class: # this is our class!!!
+                print('GREAT!!!!!!')
+                return point
+            # if we reach here this means that we found area but it is of the wrong class
+            # we don't continue since on the same levels should not be matching area and on the
+            # upper level (shallower/broader/bigger) it is not relevant
+            break
+
+    the_closest_point = None
+    for hp_state in hp_states:
+        constraints_sets = hp_state.get_class_constraint(required_class)
+        if len(constraints_sets) > 0:
             features_minimums = hp_state.get_features_minimums()
             features_maximums = hp_state.get_features_maximums()
             results = []
@@ -77,5 +88,4 @@ def find_closest_point(point, required_class, hp_states):
                     if distance < min_distance:
                         min_distance = distance
                         the_closest_point = result
-
     return the_closest_point
