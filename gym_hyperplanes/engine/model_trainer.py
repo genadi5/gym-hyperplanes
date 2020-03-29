@@ -36,11 +36,11 @@ def execute_hyperplane_search(state_manipulator, config):
 
         new_state, reward, done, _ = env.step(action)
 
-        if best_reward is None or best_reward < reward:
+        if best_reward is None or reward > best_reward:
             best_reward = reward
             best_reward_step_mark = step
             last_reward_step = step
-        if worst_reward is None or worst_reward > reward:
+        if worst_reward is None or reward < worst_reward:
             worst_reward = reward
 
         new_state = new_state.reshape(1, env.get_state().shape[0])
@@ -56,7 +56,7 @@ def execute_hyperplane_search(state_manipulator, config):
         if step % 1000 == 0:
             now = round(time.time())
             print('{} steps in {} secs, overall {} secs, {} best reward step, {} best reward'.
-                  format(step, now - last_period, start - now, best_reward_step_mark, best_reward))
+                  format(step, now - last_period, now - start, best_reward_step_mark, best_reward))
             last_period = now
         step += 1
 
