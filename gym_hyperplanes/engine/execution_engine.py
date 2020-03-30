@@ -51,7 +51,8 @@ def execute():
         data_size_to_process -= execution.get_data_size()
 
         new_iteration = execution.get_deep_level() + 1
-        missed_areas, hp_state = state_manipulator.get_hp_state(done or new_iteration > pm.ITERATIONS)
+        complete = done or new_iteration > pm.ITERATIONS  # if this was last iteration we get complete state
+        missed_areas, hp_state = state_manipulator.get_hp_state(complete)
         boundaries = execution.get_boundaries()
         if boundaries is None:
             boundaries = []

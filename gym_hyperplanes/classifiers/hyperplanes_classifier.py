@@ -29,7 +29,7 @@ class HyperplanesClassifier:
 
     def predict(self, X):
         boundaries = []
-        for boundary in self.hyperplane_state.boundaries:
+        for boundary in self.hyperplane_state.boundaries:  # for each boundary state build instance position
             b_calc = np.dot(X, boundary.get_hp_state())
             b_signs = b_calc - boundary.get_hp_dist()
             b_sides = (b_signs > 0).astype(int)
@@ -42,14 +42,7 @@ class HyperplanesClassifier:
         result = []
 
         for i, side in enumerate(sides):
-            is_out_of_bound = False
-            for boundary in boundaries:
-                b_key = make_area(boundary[1][i], self.powers)
-                if b_key != boundary[0]:
-                    result.append(None)
-                    is_out_of_bound = True
-                    break
-            if is_out_of_bound:
+            if not self.is_in_bound(i, boundaries, result):
                 continue
             key = make_area(side, self.powers)
             cls = None if key not in self.hyperplane_state.areas_to_classes \
@@ -58,6 +51,14 @@ class HyperplanesClassifier:
             result.append(None if cls is None else max(cls.items(), key=operator.itemgetter(1))[0])
 
         return np.array(result)
+
+    def is_in_bound(self, index, boundaries, result):
+        for boundary in boundaries:
+            b_key = make_area(boundary[1][index], self.powers)
+            if b_key != boundary[0]:
+                result.append(None)
+                return False
+        return True
 
     def score(self, X, y):
         return score(self, X, y)
@@ -74,46 +75,21 @@ class DeepHyperplanesClassifier:
         self.classifiers = [HyperplanesClassifier(hp_state) for hp_state in sorted_hp_states]
 
     def predict(self, X, required_class=None):
+        # each state id is isolated areas (on it own deep level) so there can't be that same point will
+        # fall in several states
+        # thus once first classified it to required class  we finished
         y = np.array([None] * X.shape[0])
         for classifier in self.classifiers:
             if required_class is not None and not classifier.is_supported_class(required_class):
                 continue
-            cy = classifier.predict(X)
-
-            has_not_predicted = False
-            for i in range(y.shape[0]):
-                if y[i] is None:
-                    y[i] = cy[i]
-                    has_not_predicted = has_not_predicted or y[i] is None
-            # each state id is isolated areas (on it own deep level) so there can't be that same point will
-            # fall in several states
-            # thus once first classified it to required class  we finished
-            if not has_not_predicted:
+            ind = np.where(y == None)  # indexes where y is not predicted yet
+            if len(ind) == 0:
                 break
-        return np.array(y)
-
-    def predict1(self, X, required_class=None):
-        y = np.array([None] * X.shape[0])
-        for classifier in self.classifiers:
-            if required_class is not None and not classifier.is_supported_class(required_class):
-                continue
-            cX = X[y == None]
+            cX = X[y == None]  # corresponded instances
             cy = classifier.predict(cX)
 
-            none_index = 0
-            has_not_predicted = False
-            for i in range(y.shape[0]):
-                if y[i] is None:
-                    y[i] = cy[none_index]
-                    has_not_predicted = has_not_predicted or y[i] is None
-                    none_index += 1
-                    if none_index == cy.shape[0]:
-                        break
-            # each state id is isolated areas (on it own deep level) so there can't be that same point will
-            # fall in several states
-            # thus once first classified it to required class  we finished
-            if not has_not_predicted:
-                break
+            for index, i in enumerate(ind[0]):
+                y[i] = cy[index]
         return np.array(y)
 
     def score(self, X, y):
