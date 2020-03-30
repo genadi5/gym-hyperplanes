@@ -2,6 +2,7 @@ import operator
 
 import numpy as np
 import pandas as pd
+import logging
 
 import gym_hyperplanes.states.hyperplanes_state as hs
 
@@ -27,6 +28,14 @@ class HyperplanesClassifier:
         self.powers = np.array([pow(2, i) for i in range(len(self.hyperplane_state.hp_dist))])
 
     def predict(self, X):
+        external_calc = None
+        external_signs = None
+        external_sides = None
+        if self.hyperplane_state.external_class_area is not None:
+            external_calc = np.dot(X, self.hyperplane_state.external_hp_state)
+            external_signs = external_calc - self.hyperplane_state.external_hp_dist
+            external_sides = (external_signs > 0).astype(int)
+
         calc = np.dot(X, self.hyperplane_state.hp_state)
         signs = calc - self.hyperplane_state.hp_dist
         sides = (signs > 0).astype(int)
@@ -34,6 +43,11 @@ class HyperplanesClassifier:
         result = []
 
         for i, side in enumerate(sides):
+            if self.hyperplane_state.external_class_area is not None:
+                external_key = make_area(external_sides[i], self.powers)
+                if external_key != self.hyperplane_state.external_class_area:
+                    result.append(None)
+                    continue
             key = make_area(side, self.powers)
             cls = None if key not in self.hyperplane_state.areas_to_classes \
                 else self.hyperplane_state.areas_to_classes[key]
@@ -103,7 +117,7 @@ class DeepHyperplanesClassifier:
 
 
 def test_pendigits():
-    hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/iris_result_a95_h20_i10.txt')
+    hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/iris_result.txt')
     # hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/pendigits_result_a95_h20_i10.txt')
     classifier = DeepHyperplanesClassifier(hp_states)
 
@@ -130,7 +144,10 @@ def test():
 
 
 def main():
+    logging.basicConfig(filename='classifier_run.log', format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+    logging.info('Classifier start')
     test_pendigits()
+    logging.info('Classifier finished')
 
 
 if __name__ == "__main__":

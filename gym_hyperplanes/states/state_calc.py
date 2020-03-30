@@ -1,3 +1,4 @@
+import logging
 import math
 
 import numpy as np
@@ -10,6 +11,25 @@ UP = 1
 DOWN = -1
 PRECISION = 0.000001
 MAX_HYPERPLANES = 20
+
+
+def print_state(best_hp_state, best_hp_dist, best_areas, best_reward, title):
+    logging.debug('+++ {}*******************'.format(title))
+    logging.debug('+++++++++++++++++++++++++++++++++++++++++++')
+    logging.debug(best_hp_state)
+    logging.debug('+++++++++++++++++++++++++++++++++++++++++++')
+    logging.debug(best_hp_dist)
+    logging.debug('+++++++++++++++++++++++++++++++++++++++++++')
+    logging.debug(best_areas)
+    logging.debug('+++++++++++++++++++++++++++++++++++++++++++')
+    logging.debug(best_reward)
+    logging.debug('**********************************')
+
+
+def print_area(area, area_data, title):
+    logging.debug('***{}***area {} ******'.format(title, area))
+    logging.debug(area_data)
+    logging.debug('**********************************')
 
 
 class Counter:
@@ -98,6 +118,8 @@ class StateManipulator:
         self.actions_done = 0
 
     def get_hp_state(self, complete):
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            print_state(self.best_hp_state, self.best_hp_dist, self.best_areas, self.best_reward, 'Start state')
         copy_best_areas = dict(self.best_areas)
         missed_areas = {}
         if not complete:
@@ -106,10 +128,28 @@ class StateManipulator:
             for area, value in self.best_areas.items():
                 sm = sum(value.values())
                 mx = max(value.values())
-                if math.ceil((mx * 100) / sm) < self.area_accuracy:
+                accuracy = math.ceil((mx * 100) / sm)
+                if accuracy < self.area_accuracy:
                     area_data = self.data_provider.get_data()[areas == area]
                     missed_areas[area] = area_data
                     copy_best_areas.pop(area, None)
+                    if logging.getLogger().isEnabledFor(logging.DEBUG):
+                        print_area(area, area_data, 'extracting {}'.format(accuracy))
+                elif logging.getLogger().isEnabledFor(logging.DEBUG):
+                    area_data = self.data_provider.get_data()[areas == area]
+                    print_area(area, area_data, 'preserving with {}'.format(accuracy))
+        elif logging.getLogger().isEnabledFor(logging.DEBUG):
+            signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
+            areas = np.apply_along_axis(make_area, 1, signs, self.powers)
+            for area, value in self.best_areas.items():
+                sm = sum(value.values())
+                mx = max(value.values())
+                accuracy = math.ceil((mx * 100) / sm)
+                area_data = self.data_provider.get_data()[areas == area]
+                print_area(area, area_data, 'preserving with {}'.format(accuracy))
+
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            logging.debug('+++ Finished state')
         return MissedAreas(missed_areas, self.best_hp_state, self.best_hp_dist), \
                None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state,
                                                                        self.best_hp_dist, copy_best_areas,
