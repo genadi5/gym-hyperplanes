@@ -16,13 +16,11 @@ def create_config():
                             max_steps=pm.STEPS, max_steps_no_better_reward=pm.STEPS_NO_REWARD_IMPROVEMENTS)
 
 
-def create_execution(iter, config, data=None, area=None, external_hp_state=None, external_hp_dist=None):
+def create_execution(iter, config, data=None, boundaries=None):
     if pm.DATA_FILE is not None:
-        return ExecutionContainer(iter, config, DataSetProvider(pm.DATA_NAME, pm.DATA_FILE, config, data),
-                                  external_hp_state, external_hp_dist, area)
+        return ExecutionContainer(iter, config, DataSetProvider(pm.DATA_NAME, pm.DATA_FILE, config, data), boundaries)
     else:
-        return ExecutionContainer(iter, config, TestDataProvider(config, data),
-                                  external_hp_state, external_hp_dist, area)
+        return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
 
 
 def execute():
@@ -54,17 +52,20 @@ def execute():
 
         new_iteration = execution.get_deep_level() + 1
         missed_areas, hp_state = state_manipulator.get_hp_state(done or new_iteration > pm.ITERATIONS)
+        boundaries = execution.get_boundaries()
+        if boundaries is None:
+            boundaries = []
         if hp_state is not None:
-            hp_state.set_external_boundaries(execution.get_external_hp_state(),
-                                             execution.get_external_hp_dist(), execution.get_external_area())
+            hp_state.set_boundaries(boundaries)
             hp_states.append(hp_state)
         if len(missed_areas.get_missed_areas()) > 0:
             if new_iteration > pm.ITERATIONS:
                 print('Reached max allowed iterations. Finished')
                 break
             for missed_area, missed_area_data in missed_areas.get_missed_areas().items():
-                new_execution = create_execution(new_iteration, create_config(), missed_area_data, missed_area,
-                                                 missed_areas.get_hp_state(), missed_areas.get_hp_dist())
+                boundary = hs.HyperplanesBoundary(missed_areas.get_hp_state(), missed_areas.get_hp_dist(), missed_area)
+                new_execution = create_execution(new_iteration, create_config(), missed_area_data,
+                                                 [boundary] + boundaries)
                 executions.append(new_execution)
                 data_size_to_process += new_execution.get_data_size()
         print('@@@@@@@@@@@@@ Finished an execution in iteration [{}], time [{}], still executions [{}] with data [{}]'.

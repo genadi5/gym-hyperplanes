@@ -20,6 +20,22 @@ def create_area_constraints(class_area, hp_state, hp_dist):
     return constraints
 
 
+class HyperplanesBoundary:
+    def __init__(self, hp_state, hp_dist, class_area):
+        self.hp_state = hp_state
+        self.hp_dist = hp_dist
+        self.class_area = class_area
+
+    def get_hp_state(self):
+        return self.hp_state
+
+    def get_hp_dist(self):
+        return self.hp_dist
+
+    def get_class_area(self):
+        return self.class_area
+
+
 class HyperplanesState:
     def __init__(self, hp_state, hp_dist, areas_to_classes, reward, features_minimums, features_maximums):
         self.hp_state = hp_state
@@ -35,14 +51,10 @@ class HyperplanesState:
         self.features_minimums = features_minimums
         self.features_maximums = features_maximums
 
-        self.external_hp_state = None
-        self.external_hp_dist = None
-        self.external_class_area = None
+        self.boundaries = []
 
-    def set_external_boundaries(self, external_hp_state, external_hp_dist, external_class_area):
-        self.external_hp_state = external_hp_state
-        self.external_hp_dist = external_hp_dist
-        self.external_class_area = external_class_area
+    def set_boundaries(self, boundaries):
+        self.boundaries = boundaries
 
     def get_hp_state(self):
         return self.hp_state
@@ -73,8 +85,8 @@ class HyperplanesState:
             cs = create_area_constraints(class_area, self.hp_state, self.hp_dist)
             constraint_sets.append(HyperplaneConstraintSet(cs))
 
-        if self.external_class_area is not None:
-            cs = create_area_constraints(self.external_class_area, self.external_hp_state, self.external_hp_dist)
+        for boundary in self.boundaries:
+            cs = create_area_constraints(boundary.class_area, self.hp_state, self.hp_dist)
             constraint_sets.append(HyperplaneConstraintSet(cs))
         return constraint_sets
 

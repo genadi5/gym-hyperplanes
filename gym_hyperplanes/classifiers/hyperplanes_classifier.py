@@ -1,8 +1,8 @@
+import logging
 import operator
 
 import numpy as np
 import pandas as pd
-import logging
 
 import gym_hyperplanes.states.hyperplanes_state as hs
 
@@ -28,13 +28,12 @@ class HyperplanesClassifier:
         self.powers = np.array([pow(2, i) for i in range(len(self.hyperplane_state.hp_dist))])
 
     def predict(self, X):
-        external_calc = None
-        external_signs = None
-        external_sides = None
-        if self.hyperplane_state.external_class_area is not None:
-            external_calc = np.dot(X, self.hyperplane_state.external_hp_state)
-            external_signs = external_calc - self.hyperplane_state.external_hp_dist
-            external_sides = (external_signs > 0).astype(int)
+        boundaries = []
+        for boundary in self.hyperplane_state.boundaries:
+            b_calc = np.dot(X, boundary.get_hp_state())
+            b_signs = b_calc - boundary.get_hp_dist()
+            b_sides = (b_signs > 0).astype(int)
+            boundaries.append((boundary.get_class_area(), b_sides))
 
         calc = np.dot(X, self.hyperplane_state.hp_state)
         signs = calc - self.hyperplane_state.hp_dist
@@ -43,11 +42,15 @@ class HyperplanesClassifier:
         result = []
 
         for i, side in enumerate(sides):
-            if self.hyperplane_state.external_class_area is not None:
-                external_key = make_area(external_sides[i], self.powers)
-                if external_key != self.hyperplane_state.external_class_area:
+            is_out_of_bound = False
+            for boundary in boundaries:
+                b_key = make_area(boundary[1][i], self.powers)
+                if b_key != boundary[0]:
                     result.append(None)
-                    continue
+                    is_out_of_bound = True
+                    break
+            if is_out_of_bound:
+                continue
             key = make_area(side, self.powers)
             cls = None if key not in self.hyperplane_state.areas_to_classes \
                 else self.hyperplane_state.areas_to_classes[key]
@@ -67,7 +70,8 @@ class DeepHyperplanesClassifier:
     def __init__(self, hp_states):
         # we are looping in reverse to start from the most deep area since if point is inside deeper (narrow) area
         # it for sure inside shallower (broader) area
-        self.classifiers = [HyperplanesClassifier(hp_state) for hp_state in reversed(hp_states)]
+        sorted_hp_states = sorted(hp_states, key=lambda x: len(x.boundaries))
+        self.classifiers = [HyperplanesClassifier(hp_state) for hp_state in sorted_hp_states]
 
     def predict(self, X, required_class=None):
         y = np.array([None] * X.shape[0])
@@ -144,10 +148,11 @@ def test():
 
 
 def main():
-    logging.basicConfig(filename='classifier_run.log', format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
-    logging.info('Classifier start')
+    logging.basicConfig(filename='classifier_run.log', format='%(asctime)s %(levelname)s:%(message)s',
+                        level=logging.DEBUG)
+    # logging.info('Classifier start')
     test_pendigits()
-    logging.info('Classifier finished')
+    # logging.info('Classifier finished')
 
 
 if __name__ == "__main__":
