@@ -1,3 +1,5 @@
+import concurrent.futures
+import os
 import time
 
 import gym_hyperplanes.engine.model_trainer as trainer
@@ -23,6 +25,36 @@ def create_execution(iter, config, data=None, boundaries=None):
         return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
 
 
+pool_executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+
+
+def execute_search(execution):
+    state_manipulator = StateManipulator(execution.get_data_provider(), execution.get_config())
+    done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
+
+    new_iteration = execution.get_deep_level() + 1
+    complete = done or new_iteration > pm.ITERATIONS  # if this was last iteration we get complete state
+    missed_areas, hp_state = state_manipulator.get_hp_state(complete)
+    boundaries = execution.get_boundaries()
+    if boundaries is None:
+        boundaries = []
+    if hp_state is not None:
+        hp_state.set_boundaries(boundaries)
+    new_executions = []
+    data_size_to_process = 0
+    if len(missed_areas.get_missed_areas()) > 0:
+        if new_iteration <= pm.ITERATIONS:
+            for missed_area, missed_area_data in missed_areas.get_missed_areas().items():
+                boundary = hs.HyperplanesBoundary(missed_areas.get_hp_state(), missed_areas.get_hp_dist(), missed_area)
+                new_execution = create_execution(new_iteration, create_config(), missed_area_data,
+                                                 [boundary] + boundaries)
+                new_executions.append(new_execution)
+                data_size_to_process += new_execution.get_data_size()
+        else:
+            print('Reached max allowed iterations. Finished')
+    return hp_state, new_executions, data_size_to_process
+
+
 def execute():
     iteration = 0
     executions = [create_execution(iteration, create_config())]
@@ -45,30 +77,14 @@ def execute():
         print('@@@@@@@@@@@@@ Running iteration [{}] during time [{}], executions [{}] with data [{}]'.
               format(iteration, round(time.time() - execution_start), len(executions), data_size_to_process))
         del executions[0]
-        state_manipulator = StateManipulator(execution.get_data_provider(), execution.get_config())
-        done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
-
         data_size_to_process -= execution.get_data_size()
+        new_hp_state, new_executions, new_data_size_to_process = execute_search(execution)
+        if new_hp_state is not None:
+            hp_states.append(new_hp_state)
 
-        new_iteration = execution.get_deep_level() + 1
-        complete = done or new_iteration > pm.ITERATIONS  # if this was last iteration we get complete state
-        missed_areas, hp_state = state_manipulator.get_hp_state(complete)
-        boundaries = execution.get_boundaries()
-        if boundaries is None:
-            boundaries = []
-        if hp_state is not None:
-            hp_state.set_boundaries(boundaries)
-            hp_states.append(hp_state)
-        if len(missed_areas.get_missed_areas()) > 0:
-            if new_iteration > pm.ITERATIONS:
-                print('Reached max allowed iterations. Finished')
-                break
-            for missed_area, missed_area_data in missed_areas.get_missed_areas().items():
-                boundary = hs.HyperplanesBoundary(missed_areas.get_hp_state(), missed_areas.get_hp_dist(), missed_area)
-                new_execution = create_execution(new_iteration, create_config(), missed_area_data,
-                                                 [boundary] + boundaries)
-                executions.append(new_execution)
-                data_size_to_process += new_execution.get_data_size()
+        executions = executions + new_executions
+        data_size_to_process += new_data_size_to_process
+
         print('@@@@@@@@@@@@@ Finished an execution in iteration [{}], time [{}], still executions [{}] with data [{}]'.
               format(iteration, round(time.time() - start), len(executions), data_size_to_process))
 
