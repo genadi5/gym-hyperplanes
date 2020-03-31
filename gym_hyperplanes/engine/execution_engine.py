@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import os
 import time
 
@@ -25,10 +26,13 @@ def create_execution(iter, config, data=None, boundaries=None):
         return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
 
 
-pool_executor = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count())
+pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count())
 
 
-def execute_search(execution):
+def execute_search(execution, config_file):
+    logging.basicConfig(filename='model_run.log', format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
+    pm.load_params(config_file)
+
     state_manipulator = StateManipulator(execution.get_data_provider(), execution.get_config())
     done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
 
@@ -66,27 +70,27 @@ def execute():
     hp_states = []
 
     start = time.time()
-    execution_start = time.time()
     while len(executions) > 0:
-        execution = executions[0]
-        if iteration != execution.get_deep_level():
-            print('@@@@@@@@@@@@@ Iteration [{}] finished in [{}], overall time [{}]'.
-                  format(iteration, round(time.time() - execution_start), round(time.time() - start)))
-            execution_start = time.time()
-        iteration = execution.get_deep_level()
-        print('@@@@@@@@@@@@@ Running iteration [{}] during time [{}], executions [{}] with data [{}]'.
-              format(iteration, round(time.time() - execution_start), len(executions), data_size_to_process))
-        del executions[0]
-        data_size_to_process -= execution.get_data_size()
-        new_hp_state, new_executions, new_data_size_to_process = execute_search(execution)
-        if new_hp_state is not None:
-            hp_states.append(new_hp_state)
-
-        executions = executions + new_executions
-        data_size_to_process += new_data_size_to_process
-
-        print('@@@@@@@@@@@@@ Finished an execution in iteration [{}], time [{}], still executions [{}] with data [{}]'.
+        start_iteration = time.time()
+        print('@@@@@@@@@@@@@ Starting iteration [{}] at time [{}] secs, executions [{}] with data [{}]'.
               format(iteration, round(time.time() - start), len(executions), data_size_to_process))
+
+        data_size_to_process = 0
+        futures = [pool_executor.submit(execute_search, execution, pm.CONFIG_FILE) for execution in executions]
+        executions = []
+        for future in concurrent.futures.as_completed(futures):
+            new_hp_state = future.result()[0]
+            new_executions = future.result()[1]
+            new_data_size_to_process = future.result()[2]
+            if new_hp_state is not None:
+                hp_states.append(new_hp_state)
+            executions = executions + new_executions
+            data_size_to_process += new_data_size_to_process
+
+        msg = '@@@@@@@@@@@@@ Finished an execution in iteration [{}] in [{}] secs, time [{}] secs, still executions [{}] with data [{}]'
+        print(msg.format(iteration, round(time.time() - start_iteration), round(time.time() - start), len(executions),
+                         data_size_to_process))
+        iteration += 1
 
     print('@@@@@@@@@@@@@ Finished execution in [{}]'.format(round(time.time() - start)))
     hs.save_hyperplanes_state(hp_states, pm.MODEL_FOLDER + '{}_result.txt'.format(execution_name))

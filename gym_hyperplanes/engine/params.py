@@ -5,6 +5,7 @@ from configparser import ConfigParser
 
 DATA_NAME = 'test_' + time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_').replace(':', '_').replace('-', '_')
 DATA_FILE = None
+CONFIG_FILE = None
 MODEL_FOLDER = None
 ITERATIONS = 5
 ACCURACY = 90
@@ -16,8 +17,9 @@ STEPS_NO_REWARD_IMPROVEMENTS_PART = 3
 STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
 
 
-def load_params():
+def load_params(config_file_path=None):
     global DATA_FILE
+    global CONFIG_FILE
     global DATA_NAME
     global MODEL_FOLDER
 
@@ -62,9 +64,10 @@ def load_params():
     ACCURACY = int(args.accuracy)
     PI_FRACTION = int(args.rotation_fraction)
     FROM_ORIGIN_DELTA_PERCENTS = int(args.distance_delta_from_origin)
-    if args.configuration is not None:
+    if config_file_path is not None or args.configuration is not None:
+        CONFIG_FILE = config_file_path
         config = ConfigParser()
-        config.read(args.configuration)
+        config.read(config_file_path if config_file_path is not None else args.configuration)
         if config.has_option('DATA', 'data_file'):
             DATA_FILE = config.get('DATA', 'data_file')
         if config.has_option('DATA', 'data_name'):
