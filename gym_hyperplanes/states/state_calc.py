@@ -49,15 +49,15 @@ def make_area(array, powers):
 
 def calculate_areas(array, powers, areas, data_provider, counter):
     area = make_area(array, powers)
-    cls = dict() if area not in areas else areas[area]
+    if area not in areas:
+        cls = data_provider.get_labels()
+        areas[area] = cls
+    else:
+        cls = areas[area]
+
     # we add all classes we found in the area
     label = data_provider.get_label(counter.get())
-    if label in cls:
-        cls[label] = cls[label] + 1
-    else:
-        cls[label] = 1
-    areas[area] = cls
-    # print('row [{}] classes [{}]'.format(counter.get(), cls))
+    cls[label] += 1
     counter.inc()
 
 
@@ -122,13 +122,13 @@ class StateManipulator:
             print_state(self.best_hp_state, self.best_hp_dist, self.best_areas, self.best_reward, 'Start state')
         copy_best_areas = dict(self.best_areas)
         missed_areas = {}
-        if not complete:
-            signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
-            areas = np.apply_along_axis(make_area, 1, signs, self.powers)
-            for area, value in self.best_areas.items():
-                sm = sum(value.values())
-                mx = max(value.values())
-                accuracy = math.ceil((mx * 100) / sm)
+        signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
+        areas = np.apply_along_axis(make_area, 1, signs, self.powers)
+        for area, value in self.best_areas.items():
+            sm = sum(value.values())
+            mx = max(value.values())
+            accuracy = math.ceil((mx * 100) / sm)
+            if not complete:
                 if accuracy < self.area_accuracy:
                     area_data = self.data_provider.get_data()[areas == area]
                     missed_areas[area] = area_data
@@ -138,13 +138,7 @@ class StateManipulator:
                 elif logging.getLogger().isEnabledFor(logging.DEBUG):
                     area_data = self.data_provider.get_data()[areas == area]
                     print_area(area, area_data, 'preserving with {}'.format(accuracy))
-        elif logging.getLogger().isEnabledFor(logging.DEBUG):
-            signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
-            areas = np.apply_along_axis(make_area, 1, signs, self.powers)
-            for area, value in self.best_areas.items():
-                sm = sum(value.values())
-                mx = max(value.values())
-                accuracy = math.ceil((mx * 100) / sm)
+            elif logging.getLogger().isEnabledFor(logging.DEBUG):
                 area_data = self.data_provider.get_data()[areas == area]
                 print_area(area, area_data, 'preserving with {}'.format(accuracy))
 
@@ -162,8 +156,6 @@ class StateManipulator:
 
     def calculate_reward(self):
         areas, count_area_misses, best_reward_worst_accuracy = self._calculate_ratio()
-
-        # self.stats()
 
         if self.best_reward is None or self.best_reward < count_area_misses:
             self.best_reward = count_area_misses

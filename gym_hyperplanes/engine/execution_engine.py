@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import math
 import os
 import time
 
@@ -13,10 +14,12 @@ from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 from gym_hyperplanes.states.state_calc import StateManipulator
 
 
-def create_config():
+def create_config(iteration):
+    steps = pm.STEPS if iteration > pm.ENTRY_LEVELS else pm.ENTRY_LEVEL_STEPS
+    no_rewards_improvement = math.ceil(steps / pm.STEPS_NO_REWARD_IMPROVEMENTS_PART)
     return HyperplaneConfig(area_accuracy=pm.ACCURACY, hyperplanes=pm.HYPERPLANES,
                             pi_fraction=pm.PI_FRACTION, from_origin_delta_percents=pm.FROM_ORIGIN_DELTA_PERCENTS,
-                            max_steps=pm.STEPS, max_steps_no_better_reward=pm.STEPS_NO_REWARD_IMPROVEMENTS)
+                            max_steps=steps, max_steps_no_better_reward=no_rewards_improvement)
 
 
 def create_execution(iter, config, data=None, boundaries=None):
@@ -50,7 +53,7 @@ def execute_search(execution, config_file):
         if new_iteration <= pm.ITERATIONS:
             for missed_area, missed_area_data in missed_areas.get_missed_areas().items():
                 boundary = hs.HyperplanesBoundary(missed_areas.get_hp_state(), missed_areas.get_hp_dist(), missed_area)
-                new_execution = create_execution(new_iteration, create_config(), missed_area_data,
+                new_execution = create_execution(new_iteration, create_config(new_iteration), missed_area_data,
                                                  [boundary] + boundaries)
                 new_executions.append(new_execution)
                 data_size_to_process += new_execution.get_data_size()
@@ -61,7 +64,7 @@ def execute_search(execution, config_file):
 
 def execute():
     iteration = 0
-    executions = [create_execution(iteration, create_config())]
+    executions = [create_execution(iteration, create_config(iteration))]
     starting_execution = executions[0]
     execution_name = starting_execution.get_data_provider().get_name()
 
@@ -77,7 +80,9 @@ def execute():
 
         data_size_to_process = 0
         futures = [pool_executor.submit(execute_search, execution, pm.CONFIG_FILE) for execution in executions]
+        submited_executions = len(executions)
         executions = []
+        finished_executions = 0
         for future in concurrent.futures.as_completed(futures):
             new_hp_state = future.result()[0]
             new_executions = future.result()[1]
@@ -86,6 +91,11 @@ def execute():
                 hp_states.append(new_hp_state)
             executions = executions + new_executions
             data_size_to_process += new_data_size_to_process
+            finished_executions += 1
+            print(
+                '@@@@@@@@@@@@ Finished {}/{} executions in iteration {} in {} secs, {} executions on next iteration with data size {}'.
+                format(finished_executions, submited_executions, iteration, round(time.time() - start_iteration),
+                       len(executions), data_size_to_process))
 
         msg = '@@@@@@@@@@@@@ Finished an execution in iteration [{}] in [{}] secs, time [{}] secs, still executions [{}] with data [{}]'
         print(msg.format(iteration, round(time.time() - start_iteration), round(time.time() - start), len(executions),

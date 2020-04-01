@@ -16,6 +16,8 @@ class DataSetProvider(DataProvider):
         else:
             self.data = data
 
+        clss = list(self.data.iloc[:, -1].unique())
+        self.classes = dict(zip(clss, [0] * len(clss)))
         self.only_data = self.data.iloc[:, :-1]
         min_value = float(min(self.only_data))
         max_value = float(max(self.only_data))
@@ -51,6 +53,9 @@ class DataSetProvider(DataProvider):
 
     def get_data(self):
         return self.data
+
+    def get_labels(self):
+        return self.classes.copy()
 
     def get_label(self, ind):
         return self.data.iloc[ind, -1]

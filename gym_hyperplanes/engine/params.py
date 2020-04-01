@@ -7,13 +7,15 @@ DATA_NAME = 'test_' + time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_').repla
 DATA_FILE = None
 CONFIG_FILE = None
 MODEL_FOLDER = None
-ITERATIONS = 5
-ACCURACY = 90
-PI_FRACTION = 12
-FROM_ORIGIN_DELTA_PERCENTS = 5
-HYPERPLANES = 30
-STEPS = 15000
-STEPS_NO_REWARD_IMPROVEMENTS_PART = 3
+ITERATIONS = 10
+ACCURACY = 95
+PI_FRACTION = 6
+FROM_ORIGIN_DELTA_PERCENTS = 10
+HYPERPLANES = 10
+ENTRY_LEVELS = 0
+ENTRY_LEVEL_STEPS = 1000
+STEPS = 4000
+STEPS_NO_REWARD_IMPROVEMENTS_PART = 4
 STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
 
 
@@ -23,6 +25,8 @@ def load_params(config_file_path=None):
     global DATA_NAME
     global MODEL_FOLDER
 
+    global ENTRY_LEVELS
+    global ENTRY_LEVEL_STEPS
     global STEPS
     global STEPS_NO_REWARD_IMPROVEMENTS_PART
     global STEPS_NO_REWARD_IMPROVEMENTS
@@ -75,6 +79,10 @@ def load_params(config_file_path=None):
         if config.has_option('DATA', 'model_folder'):
             MODEL_FOLDER = config.get('DATA', 'model_folder')
 
+        if config.has_option('EXECUTION', 'entry_levels'):
+            ENTRY_LEVELS = int(config.get('EXECUTION', 'entry_levels'))
+        if config.has_option('EXECUTION', 'entry_level_steps'):
+            ENTRY_LEVEL_STEPS = int(config.get('EXECUTION', 'entry_level_steps'))
         if config.has_option('EXECUTION', 'steps'):
             STEPS = int(config.get('EXECUTION', 'steps'))
         if config.has_option('EXECUTION', 'no_improvement_in_reward_part'):

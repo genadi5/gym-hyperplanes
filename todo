@@ -1,5 +1,9 @@
-1. Classification --> in progress
+1. Classification --> in progress --> Done
+4. Multi-threading on execution --> in progress --> Done
+
 2. Export to specific file
-3. Variables should be greater than their minimaum and not greater than 0
-4. Multithreading on execution 
-5. If we have two areas (one in another) have same boundery than we have to do something with this
+3. Variables should be greater than their minimum and not greater than 0
+5. If we have two areas (one in another) have same boundary than we have to do something with this
+6. Use SARSA instead DQN
+7. Optimization of reward calculation
+8. 

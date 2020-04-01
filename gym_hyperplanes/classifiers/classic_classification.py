@@ -12,11 +12,8 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 # data_files = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/iris/iris.data'
-data_files = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/pendigits/pendigits.tra'
-if os.path.isfile(data_files):
-    data = pd.read_csv(data_files, header=None)
-else:
-    data = datasets.load_iris()
+data_files = '/UP/Teza/classoptimizer/pendigits/pendigits.tra'
+data = pd.read_csv(data_files, header=None)
 
 X = data.iloc[:, :-1]
 y = data.iloc[:, -1]
