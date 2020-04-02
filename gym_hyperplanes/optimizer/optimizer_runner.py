@@ -9,4 +9,12 @@ def execute():
     instance = pm.INSTANCE
     result = mb.find_closest_point(instance, required_class, hp_states)
     print(result)
-    pass
+
+
+def main():
+    pm.load_params()
+    execute()
+
+
+if __name__ == "__main__":
+    main()

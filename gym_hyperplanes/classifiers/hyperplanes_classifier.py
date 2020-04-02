@@ -33,7 +33,8 @@ class HyperplanesClassifier:
             b_calc = np.dot(X, boundary.get_hp_state())
             b_signs = b_calc - boundary.get_hp_dist()
             b_sides = (b_signs > 0).astype(int)
-            boundaries.append((boundary.get_class_area(), b_sides))
+            b_powers = np.array([pow(2, i) for i in range(len(boundary.get_hp_dist()))])
+            boundaries.append((boundary.get_class_area(), b_sides, b_powers))
 
         calc = np.dot(X, self.hyperplane_state.hp_state)
         signs = calc - self.hyperplane_state.hp_dist
@@ -54,7 +55,7 @@ class HyperplanesClassifier:
 
     def is_in_bound(self, index, boundaries, result):
         for boundary in boundaries:
-            b_key = make_area(boundary[1][index], self.powers)
+            b_key = make_area(boundary[1][index], boundary[2])
             if b_key != boundary[0]:
                 result.append(None)
                 return False

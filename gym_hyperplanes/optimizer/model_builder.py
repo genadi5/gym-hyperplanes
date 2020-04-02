@@ -59,11 +59,14 @@ def find_closest_point(point, required_class, hp_states):
             results = []
 
             for i, constraints_set in enumerate(constraints_sets):
-                m = GEKKO(remote=False)  # Initialize gekko
-                vars = generate_vars_objective(m, features_minimums, features_maximums, point)
-                generate_constraints(m, vars, constraints_set.get_constraints())
-                m.solve(disp=False)  # Solve
-                results.append(([var.value[0] for var in vars], m.options.objfcnval))
+                try:
+                    m = GEKKO(remote=False)  # Initialize gekko
+                    vars = generate_vars_objective(m, features_minimums, features_maximums, point)
+                    generate_constraints(m, vars, constraints_set.get_constraints())
+                    m.solve(disp=False)  # Solve
+                    results.append(([var.value[0] for var in vars], m.options.objfcnval))
+                except:
+                    pass
 
             print("Result: " + str(results))
             min_distance = 0

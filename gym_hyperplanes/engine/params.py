@@ -11,8 +11,10 @@ ITERATIONS = 10
 ACCURACY = 95
 PI_FRACTION = 6
 FROM_ORIGIN_DELTA_PERCENTS = 10
-HYPERPLANES = 10
-ENTRY_LEVELS = 0
+HYPERPLANES = 5
+# levels starting from 1
+ENTRY_LEVELS = 1
+ENTRY_LEVEL_HYPERPLANES = 20
 ENTRY_LEVEL_STEPS = 1000
 STEPS = 4000
 STEPS_NO_REWARD_IMPROVEMENTS_PART = 4
@@ -26,6 +28,7 @@ def load_params(config_file_path=None):
     global MODEL_FOLDER
 
     global ENTRY_LEVELS
+    global ENTRY_LEVEL_HYPERPLANES
     global ENTRY_LEVEL_STEPS
     global STEPS
     global STEPS_NO_REWARD_IMPROVEMENTS_PART
@@ -81,8 +84,11 @@ def load_params(config_file_path=None):
 
         if config.has_option('EXECUTION', 'entry_levels'):
             ENTRY_LEVELS = int(config.get('EXECUTION', 'entry_levels'))
+        if config.has_option('EXECUTION', 'entry_level_hyperplanes'):
+            ENTRY_LEVEL_HYPERPLANES = int(config.get('EXECUTION', 'entry_level_hyperplanes'))
         if config.has_option('EXECUTION', 'entry_level_steps'):
             ENTRY_LEVEL_STEPS = int(config.get('EXECUTION', 'entry_level_steps'))
+
         if config.has_option('EXECUTION', 'steps'):
             STEPS = int(config.get('EXECUTION', 'steps'))
         if config.has_option('EXECUTION', 'no_improvement_in_reward_part'):

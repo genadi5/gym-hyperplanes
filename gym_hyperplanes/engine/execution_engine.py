@@ -16,8 +16,9 @@ from gym_hyperplanes.states.state_calc import StateManipulator
 
 def create_config(iteration):
     steps = pm.STEPS if iteration > pm.ENTRY_LEVELS else pm.ENTRY_LEVEL_STEPS
+    hyperplanes = pm.HYPERPLANES if iteration > pm.ENTRY_LEVELS else pm.ENTRY_LEVEL_HYPERPLANES
     no_rewards_improvement = math.ceil(steps / pm.STEPS_NO_REWARD_IMPROVEMENTS_PART)
-    return HyperplaneConfig(area_accuracy=pm.ACCURACY, hyperplanes=pm.HYPERPLANES,
+    return HyperplaneConfig(area_accuracy=pm.ACCURACY, hyperplanes=hyperplanes,
                             pi_fraction=pm.PI_FRACTION, from_origin_delta_percents=pm.FROM_ORIGIN_DELTA_PERCENTS,
                             max_steps=steps, max_steps_no_better_reward=no_rewards_improvement)
 
@@ -29,12 +30,24 @@ def create_execution(iter, config, data=None, boundaries=None):
         return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
 
 
-pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count())
+WORKERS = os.cpu_count()
+# WORKERS = 4
+
+pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
+
+
+# pool_executor = concurrent.futures.ProcessPoolExecutor(6)
 
 
 def execute_search(execution, config_file):
     logging.basicConfig(filename='model_run.log', format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     pm.load_params(config_file)
+
+    msg = '$$$$$$$$$$$$$ Starting {} iteration with {} hyperplanes on data size {} $$$$$$$$$$$$$'. \
+        format(execution.get_deep_level(), execution.get_config().get_hyperplanes(),
+               execution.data_provider.get_data_size())
+    print(msg)
+    logging.info(msg)
 
     state_manipulator = StateManipulator(execution.get_data_provider(), execution.get_config())
     done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
@@ -59,48 +72,53 @@ def execute_search(execution, config_file):
                 data_size_to_process += new_execution.get_data_size()
         else:
             print('Reached max allowed iterations. Finished')
-    return hp_state, new_executions, data_size_to_process
+    return hp_state, new_executions, data_size_to_process, execution.get_data_size()
 
 
 def execute():
-    iteration = 0
-    executions = [create_execution(iteration, create_config(iteration))]
-    starting_execution = executions[0]
+    start_iteration = 1
+    starting_execution = create_execution(start_iteration, create_config(start_iteration))
+
     execution_name = starting_execution.get_data_provider().get_name()
-
-    data_size_to_process = starting_execution.get_data_size()
-
     hp_states = []
 
+    data_to_process = starting_execution.get_data_size()
+    done_executions = 0
     start = time.time()
+    executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)]
     while len(executions) > 0:
-        start_iteration = time.time()
-        print('@@@@@@@@@@@@@ Starting iteration [{}] at time [{}] secs, executions [{}] with data [{}]'.
-              format(iteration, round(time.time() - start), len(executions), data_size_to_process))
+        print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.
+              format(round(time.time() - start), done_executions, len(executions), data_to_process))
 
-        data_size_to_process = 0
-        futures = [pool_executor.submit(execute_search, execution, pm.CONFIG_FILE) for execution in executions]
-        submited_executions = len(executions)
-        executions = []
-        finished_executions = 0
-        for future in concurrent.futures.as_completed(futures):
-            new_hp_state = future.result()[0]
-            new_executions = future.result()[1]
-            new_data_size_to_process = future.result()[2]
+        submitted_executions = []
+
+        removed_from_execution = 0
+        added_new_executions = 0
+        for execution in concurrent.futures.as_completed(executions):
+            removed_from_execution += 1
+            new_hp_state = execution.result()[0]
+            new_executions = execution.result()[1]
+            new_execution_data_to_process = execution.result()[2]
+
+            data_to_process += new_execution_data_to_process
+            data_to_process -= execution.result()[3]
+
             if new_hp_state is not None:
                 hp_states.append(new_hp_state)
-            executions = executions + new_executions
-            data_size_to_process += new_data_size_to_process
-            finished_executions += 1
-            print(
-                '@@@@@@@@@@@@ Finished {}/{} executions in iteration {} in {} secs, {} executions on next iteration with data size {}'.
-                format(finished_executions, submited_executions, iteration, round(time.time() - start_iteration),
-                       len(executions), data_size_to_process))
+            if len(new_executions) > 0:
+                submitted_executions += [pool_executor.submit(execute_search, new_execution, pm.CONFIG_FILE)
+                                         for new_execution in new_executions]
 
-        msg = '@@@@@@@@@@@@@ Finished an execution in iteration [{}] in [{}] secs, time [{}] secs, still executions [{}] with data [{}]'
-        print(msg.format(iteration, round(time.time() - start_iteration), round(time.time() - start), len(executions),
-                         data_size_to_process))
-        iteration += 1
+                print('@@@@@@@@@@@@ At time {} secs adding {} with data size {} to remaining {} to total size {}'.
+                      format(round(time.time() - start), len(new_executions), new_execution_data_to_process,
+                             len(executions) - removed_from_execution + added_new_executions, data_to_process))
+                added_new_executions += len(new_executions)  # current round add after print above
+                print('@@@@@@@@@@@@ At time {} secs done {}, running {} with total size {}'.
+                      format(round(time.time() - start), done_executions,
+                             len(executions) - removed_from_execution + added_new_executions, data_to_process))
+            done_executions += 1
 
-    print('@@@@@@@@@@@@@ Finished execution in [{}]'.format(round(time.time() - start)))
+        executions = submitted_executions
+
+    print('@@@@@@@@@@@@@ Finished {} execution in [{}]'.format(done_executions, round(time.time() - start)))
     hs.save_hyperplanes_state(hp_states, pm.MODEL_FOLDER + '{}_result.txt'.format(execution_name))
