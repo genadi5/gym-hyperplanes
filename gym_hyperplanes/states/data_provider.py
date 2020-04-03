@@ -17,7 +17,7 @@ class DataProvider:
     def get_data(self):
         pass
 
-    def get_label(self, ind):
+    def get_labels(self):
         pass
 
     def get_max_distance_from_origin(self):

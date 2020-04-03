@@ -31,7 +31,7 @@ def create_execution(iter, config, data=None, boundaries=None):
 
 
 WORKERS = os.cpu_count()
-WORKERS = WORKERS * 2
+# WORKERS = WORKERS * 2
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
 
@@ -85,6 +85,7 @@ def execute():
     data_to_process = starting_execution.get_data_size()
     done_executions = 0
     start = time.time()
+    execute_search(starting_execution, pm.CONFIG_FILE)
     executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)]
     while len(executions) > 0:
         print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.

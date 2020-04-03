@@ -32,33 +32,24 @@ def print_area(area, area_data, title):
     logging.debug('**********************************')
 
 
-class Counter:
-    def __init__(self):
-        self.counter = 0
-
-    def get(self):
-        return self.counter
-
-    def inc(self):
-        self.counter += 1
+def make_area_bool(array, powers):
+    return np.bitwise_or.reduce(powers[array])
 
 
 def make_area(array, powers):
-    return np.bitwise_or.reduce(powers[array > 0])
+    return make_area_bool(powers, array > 0)
 
 
-def calculate_areas(array, powers, areas, data_provider, counter):
-    area = make_area(array, powers)
-    if area not in areas:
-        cls = data_provider.get_labels()
-        areas[area] = cls
-    else:
-        cls = areas[area]
+def calculate_areas(unique_side, sides, powers, areas, data_provider):
+    rows_indexes = np.where(sides == unique_side)[0]
+    rows_indexes_counts = np.unique(rows_indexes, return_counts=True)
+    indexes = rows_indexes_counts[0][rows_indexes_counts[1] == len(unique_side)]
+    classes = np.take(data_provider.get_labels(), indexes)
+    classes_counts = np.unique(classes, return_counts=True)
+    classes = {cls: cnt for cls, cnt in zip(classes_counts[0], classes_counts[1])}
 
-    # we add all classes we found in the area
-    label = data_provider.get_label(counter.get())
-    cls[label] += 1
-    counter.inc()
+    area = make_area_bool(unique_side, powers)
+    areas[area] = classes
 
 
 class StateManipulator:
@@ -172,8 +163,9 @@ class StateManipulator:
         areas = dict()
         # calculate value of instances per hyperplane
         signs = np.dot(self.data_provider.get_only_data(), self.hp_state) - self.hp_dist
-        row_counter = Counter()
-        keys = np.apply_along_axis(calculate_areas, 1, signs, self.powers, areas, self.data_provider, row_counter)
+        sides = (signs > 0).astype(int)
+        unique_sides = np.unique(sides, axis=0)
+        np.apply_along_axis(calculate_areas, 1, unique_sides, sides, self.powers, areas, self.data_provider)
 
         # self.total_areas += (round(time.time()) - start_areas)
         the_worst_accuracy = None
