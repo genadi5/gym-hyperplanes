@@ -85,7 +85,7 @@ def execute():
     data_to_process = starting_execution.get_data_size()
     done_executions = 0
     start = time.time()
-    execute_search(starting_execution, pm.CONFIG_FILE)
+    # execute_search(starting_execution, pm.CONFIG_FILE)
     executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)]
     while len(executions) > 0:
         print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.

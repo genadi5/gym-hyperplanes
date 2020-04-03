@@ -163,7 +163,7 @@ class StateManipulator:
         areas = dict()
         # calculate value of instances per hyperplane
         signs = np.dot(self.data_provider.get_only_data(), self.hp_state) - self.hp_dist
-        sides = (signs > 0).astype(int)
+        sides = (signs > 0)
         unique_sides = np.unique(sides, axis=0)
         np.apply_along_axis(calculate_areas, 1, unique_sides, sides, self.powers, areas, self.data_provider)
 
