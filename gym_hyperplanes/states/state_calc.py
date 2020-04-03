@@ -32,12 +32,8 @@ def print_area(area, area_data, title):
     logging.debug('**********************************')
 
 
-def make_area_bool(array, powers):
-    return np.bitwise_or.reduce(powers[array])
-
-
 def make_area(array, powers):
-    return make_area_bool(powers, array > 0)
+    return np.bitwise_or.reduce(powers[array > 0])
 
 
 def calculate_areas(unique_side, sides, powers, areas, data_provider):
@@ -48,7 +44,7 @@ def calculate_areas(unique_side, sides, powers, areas, data_provider):
     classes_counts = np.unique(classes, return_counts=True)
     classes = {cls: cnt for cls, cnt in zip(classes_counts[0], classes_counts[1])}
 
-    area = make_area_bool(unique_side, powers)
+    area = np.bitwise_or.reduce(powers[unique_side])
     areas[area] = classes
 
 
