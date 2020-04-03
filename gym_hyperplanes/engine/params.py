@@ -6,6 +6,7 @@ from configparser import ConfigParser
 DATA_NAME = 'test_' + time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_').replace(':', '_').replace('-', '_')
 DATA_FILE = None
 CONFIG_FILE = None
+HYPERPLANES_FILE = None
 MODEL_FOLDER = None
 ITERATIONS = 10
 ACCURACY = 95
@@ -26,6 +27,7 @@ def load_params(config_file_path=None):
     global CONFIG_FILE
     global DATA_NAME
     global MODEL_FOLDER
+    global HYPERPLANES_FILE
 
     global ENTRY_LEVELS
     global ENTRY_LEVEL_HYPERPLANES
@@ -81,6 +83,8 @@ def load_params(config_file_path=None):
             DATA_NAME = config.get('DATA', 'data_name')
         if config.has_option('DATA', 'model_folder'):
             MODEL_FOLDER = config.get('DATA', 'model_folder')
+        if config.has_option('DATA', 'hyperplanes_file'):
+            HYPERPLANES_FILE = config.get('DATA', 'hyperplanes_file')
 
         if config.has_option('EXECUTION', 'entry_levels'):
             ENTRY_LEVELS = int(config.get('EXECUTION', 'entry_levels'))

@@ -99,7 +99,7 @@ class DeepHyperplanesClassifier:
 
 def test_pendigits():
     # hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/iris_result.txt')
-    hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/pendigits_result.txt')
+    hp_states = hs.load_hyperplanes_state('/UP/Teza/classoptimizer/model/pendigits_result.hs')
     classifier = DeepHyperplanesClassifier(hp_states)
 
     # data_files = '/UP/Teza/classoptimizer/pendigits/pendigits.tra'
