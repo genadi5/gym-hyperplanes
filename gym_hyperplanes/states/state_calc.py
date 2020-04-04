@@ -2,6 +2,7 @@ import logging
 import math
 
 import numpy as np
+import numpy_indexed as npi
 
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
@@ -36,16 +37,15 @@ def make_area(array, powers):
     return np.bitwise_or.reduce(powers[array > 0])
 
 
-def calculate_areas(unique_side, sides, powers, areas, data_provider):
-    rows_indexes = np.where(sides == unique_side)[0]
-    rows_indexes_counts = np.unique(rows_indexes, return_counts=True)
-    indexes = rows_indexes_counts[0][rows_indexes_counts[1] == len(unique_side)]
-    classes = np.take(data_provider.get_labels(), indexes)
-    classes_counts = np.unique(classes, return_counts=True)
-    classes = {cls: cnt for cls, cnt in zip(classes_counts[0], classes_counts[1])}
+def calculate_areas(indices, sides, powers, areas, data_provider):
+    unique_side = sides[indices[0]]
+    labels = data_provider.get_labels()
+    classes = np.take(labels, indices)
+    labels_indices = npi.group_by(classes).split(np.arange(len(classes)))
+    classes_count = {classes.iloc[labels_ind[0]]: len(labels_ind) for labels_ind in labels_indices}
 
     area = np.bitwise_or.reduce(powers[unique_side])
-    areas[area] = classes
+    areas[area] = classes_count
 
 
 class StateManipulator:
@@ -160,8 +160,10 @@ class StateManipulator:
         # calculate value of instances per hyperplane
         signs = np.dot(self.data_provider.get_only_data(), self.hp_state) - self.hp_dist
         sides = (signs > 0)
-        unique_sides = np.unique(sides, axis=0)
-        np.apply_along_axis(calculate_areas, 1, unique_sides, sides, self.powers, areas, self.data_provider)
+
+        indices_list = npi.group_by(sides).split(np.arange(len(sides)))
+        for indices in indices_list:
+            calculate_areas(indices, sides, self.powers, areas, self.data_provider)
 
         # self.total_areas += (round(time.time()) - start_areas)
         the_worst_accuracy = None

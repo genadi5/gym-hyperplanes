@@ -12,7 +12,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 # data_files = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/iris/iris.data'
-data_files = '/UP/Teza/classoptimizer/pendigits/pendigits.tra'
+data_files = '/UP/Teza/classoptimizer/avila/avila-tr.txt'
 data = pd.read_csv(data_files, header=None)
 
 X = data.iloc[:, :-1]
