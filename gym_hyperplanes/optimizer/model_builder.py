@@ -50,7 +50,7 @@ def find_closest_point(point, required_class, hp_states):
     if y[0] is not None:  # we found area for point
         if y[0] == required_class:  # this is our class!!!
             print('GREAT!!!!!!')
-            return point
+            return True, point
 
     the_closest_point = None
     for hp_state in hp_states:
@@ -84,4 +84,4 @@ def find_closest_point(point, required_class, hp_states):
                         min_distance = distance
                         the_closest_point = result
     print(the_closest_point)
-    return the_closest_point[0]
+    return False, the_closest_point[0]
