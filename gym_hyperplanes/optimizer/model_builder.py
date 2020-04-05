@@ -1,9 +1,11 @@
 import math
+import sys
+import os
 
 import numpy as np
 from gekko import GEKKO
 
-from gym_hyperplanes.classifiers.hyperplanes_classifier import HyperplanesClassifier, DeepHyperplanesClassifier
+from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
@@ -16,7 +18,7 @@ def generate_vars_objective(m, features_minimums, features_maximums, point):
             objective = (var - point[i]) * (var - point[i])
         else:
             objective = objective + (var - point[i]) * (var - point[i])
-    print('Objective:[{}]'.format(objective))
+    # print('Objective:[{}]'.format(objective))
     m.Obj(objective)  # Objective
     return vars
 
@@ -34,12 +36,12 @@ def generate_constraints(m, vars, hyperplane_constraints):
         else:
             constraint = constraint >= hyperplane_constraint.get_d()
         m.Equation(constraint)
-        print('Eq:[{}]'.format(constraint))
+        # print('Eq:[{}]'.format(constraint))
 
     for var in vars:
         constraint = var >= 0
         m.Equation(constraint)
-        print('Eq:[{}]'.format(constraint))
+        # print('Eq:[{}]'.format(constraint))
 
 
 def find_closest_point(point, required_class, hp_states):
@@ -59,6 +61,7 @@ def find_closest_point(point, required_class, hp_states):
             results = []
 
             for i, constraints_set in enumerate(constraints_sets):
+                sys.stdout = open(os.devnull, "w")
                 try:
                     m = GEKKO(remote=False)  # Initialize gekko
                     vars = generate_vars_objective(m, features_minimums, features_maximums, point)
@@ -67,8 +70,9 @@ def find_closest_point(point, required_class, hp_states):
                     results.append(([var.value[0] for var in vars], m.options.objfcnval))
                 except:
                     pass
+                sys.stdout = sys.__stdout__
 
-            print("Result: " + str(results))
+            # print("Result: " + str(results))
             min_distance = 0
             for result, constraints in zip(results, constraints_sets):
                 if the_closest_point is None:
@@ -79,4 +83,5 @@ def find_closest_point(point, required_class, hp_states):
                     if distance < min_distance:
                         min_distance = distance
                         the_closest_point = result
-    return the_closest_point
+    print(the_closest_point)
+    return the_closest_point[0]

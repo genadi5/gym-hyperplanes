@@ -30,8 +30,8 @@ def create_execution(iter, config, data=None, boundaries=None):
         return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
 
 
-# WORKERS = os.cpu_count()
-WORKERS = 4
+WORKERS = os.cpu_count()
+WORKERS = int(WORKERS / 2)
 # WORKERS = WORKERS * 2
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
