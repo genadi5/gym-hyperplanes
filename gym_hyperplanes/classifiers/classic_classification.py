@@ -22,6 +22,8 @@ def run_classifiers(X_train, X_test, y_train, y_test):
 
     for name, clf in zip(names, classifiers):
         clf.fit(X_train, y_train)
+        predict = clf.predict(X_test)
+        print('Predicted {}'.format(predict))
         score = clf.score(X_test, y_test)
 
         print('Name: [', name, '], Score: [', score, ']')

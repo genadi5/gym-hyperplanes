@@ -14,15 +14,11 @@ def execute():
     penetration_delta = pm.PENETRATION_DELTA
     results = []
 
-    print('Starting to search closest point to instances')
     for instance in instances:
         print('Starting instance {}'.format(instance))
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta)
         print('+++++ For instance {} closest point {} in constraint {}'.format(instance, result, constraints))
         results.append(result)
-        print('Finished instance {}'.format(instance))
-
-    print('Finished to search closest point to instances')
     if pm.TRAIN_SET is not None:
         print('Starting testing prediction')
         X = np.array(results)
@@ -38,9 +34,7 @@ def execute():
 
 def main():
     pm.load_params()
-    print('Starting')
     execute()
-    print('Finished')
 
 
 if __name__ == "__main__":
