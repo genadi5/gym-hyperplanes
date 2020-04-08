@@ -11,7 +11,7 @@ PENETRATION_DELTA = None
 def get_instances(filename):
     with open(filename) as f:
         content = f.readlines()
-    instances = [x.strip() for x in content]
+    instances = [x.strip() for x in content if not x.startswith('#')]
     result = []
     for instance in instances:
         result.append([float(i) for i in instance.split(',')])

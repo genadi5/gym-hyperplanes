@@ -1,10 +1,10 @@
 import gym
 import numpy as np
+# from rl.agents.dqn import DQNAgent
+from gym_hyperplanes.dqn import DQNAgent
 from keras.layers import Dense, Activation, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
-# from rl.agents.dqn import DQNAgent
-from gym_hyperplanes.dqn import DQNAgent
 from rl.memory import SequentialMemory
 from rl.policy import BoltzmannQPolicy
 
@@ -13,7 +13,7 @@ env = gym.make('gym_hyperplanes:hyperplanes-v0')
 np.random.seed(123)
 env.seed(123)
 
-env.configure(3,4)
+env.configure(3, 4)
 
 HPs = 2
 angles = 4

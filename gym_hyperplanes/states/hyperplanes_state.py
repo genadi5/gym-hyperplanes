@@ -83,11 +83,10 @@ class HyperplanesState:
         constraint_sets = []
         for class_area in class_areas:
             cs = create_area_constraints(class_area, self.hp_state, self.hp_dist)
-            constraint_sets.append(HyperplaneConstraintSet(cs))
-
-        for boundary in self.boundaries:
-            cs = create_area_constraints(boundary.class_area, self.hp_state, self.hp_dist)
-            constraint_sets.append(HyperplaneConstraintSet(cs))
+            for boundary in self.boundaries:
+                bcs = create_area_constraints(boundary.class_area, boundary.hp_state, boundary.hp_dist)
+                cs = cs + bcs
+            constraint_sets.append(HyperplaneConstraintSet(cs, class_area))
         return constraint_sets
 
     def get_features_minimums(self):
@@ -114,8 +113,12 @@ class HyperplaneConstraint:
 
 
 class HyperplaneConstraintSet:
-    def __init__(self, constraints):
+    def __init__(self, constraints, class_area):
         self.constraints = constraints
+        self.class_area = class_area
 
     def get_constraints(self):
         return self.constraints
+
+    def get_area(self):
+        return self.class_area

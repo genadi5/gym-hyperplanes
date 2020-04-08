@@ -2,7 +2,6 @@ import math
 
 import numpy as np
 import pandas as pd
-
 from gym_hyperplanes.states.data_provider import DataProvider
 
 

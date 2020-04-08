@@ -1,10 +1,8 @@
 from __future__ import division
+
 import warnings
 
-import keras.backend as K
-from keras.models import Model
 from keras.layers import Lambda, Input, Layer, Dense
-
 from rl.core import Agent
 from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *

@@ -3,7 +3,6 @@ import math
 
 import numpy as np
 import numpy_indexed as npi
-
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
 from gym_hyperplanes.states.missed_areas import MissedAreas

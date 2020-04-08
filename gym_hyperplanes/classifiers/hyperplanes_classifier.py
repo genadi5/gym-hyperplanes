@@ -1,10 +1,9 @@
 import logging
 import operator
 
+import gym_hyperplanes.states.hyperplanes_state as hs
 import numpy as np
 import pandas as pd
-
-import gym_hyperplanes.states.hyperplanes_state as hs
 
 
 def make_area(array, powers):

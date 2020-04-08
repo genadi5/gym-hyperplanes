@@ -2,8 +2,6 @@ import time
 
 import gym
 
-from gym_hyperplanes.states.state_calc import StateManipulator
-
 
 class HyperPlanesEnv(gym.Env):
     metadata = {'render.modes': ['human']}
