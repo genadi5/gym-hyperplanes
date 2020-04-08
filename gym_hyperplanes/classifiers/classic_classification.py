@@ -35,13 +35,32 @@ def load_split_and_test(data_file):
     X = data.iloc[:, :-1]
     y = data.iloc[:, -1]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.4, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
     run_classifiers(X_train, X_test, y_train, y_test)
 
 
-def load_and_test(data_file, X_test, y_test):
-    data = pd.read_csv(data_file, header=None)
+def load_and_test(train_data_file, X_test, y_test):
+    data = pd.read_csv(train_data_file, header=None)
 
     X = data.iloc[:, :-1]
     y = data.iloc[:, -1]
     run_classifiers(X, X_test, y, y_test)
+
+
+def load_train_and_test(train_data_file, test_data_file):
+    test_data = pd.read_csv(test_data_file, header=None)
+
+    X_test = test_data.iloc[:, :-1]
+    y_test = test_data.iloc[:, -1]
+    load_and_test(train_data_file, X_test, y_test)
+
+
+def main():
+    # train_data_file = '/UP/Teza/classoptimizer/pendigits/pendigits.tra'
+    # test_data_file = '/UP/Teza/classoptimizer/pendigits/pendigits.tes'
+    # load_train_and_test(train_data_file, test_data_file)
+    load_split_and_test('/UP/Teza/classoptimizer/iris/iris.data')
+
+
+if __name__ == "__main__":
+    main()
