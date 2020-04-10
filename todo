@@ -14,3 +14,5 @@
 9. Maybe change reward evaluation - for example amount of grouped (by sufficient accuracy) but not including singles
 10. Further performance optimization - find where we loose
 11. Documentation
+12. Limit minimum of instances in area from below
+13. which part of actions should be movement of hyperplane from all the movements

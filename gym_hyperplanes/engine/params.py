@@ -20,6 +20,7 @@ ENTRY_LEVEL_STEPS = 1000
 STEPS = 4000
 STEPS_NO_REWARD_IMPROVEMENTS_PART = 4
 STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
+ROTATION_TRANSLATION_MAX_RATIO = 10
 
 
 def load_params(config_file_path=None):
@@ -41,6 +42,7 @@ def load_params(config_file_path=None):
     global ACCURACY
     global PI_FRACTION
     global FROM_ORIGIN_DELTA_PERCENTS
+    global ROTATION_TRANSLATION_MAX_RATIO
 
     parser = ArgumentParser()
     parser.add_argument("-n", "--name", dest="name",
@@ -60,6 +62,8 @@ def load_params(config_file_path=None):
     parser.add_argument("-o", "--distance_delta_from_origin", dest="distance_delta_from_origin", default=5,
                         help="Distance delta in percents of hyperplane movement in values range")
     parser.add_argument("-m", "--model_output_folder", dest="model_folder", help="Model output folder")
+    parser.add_argument("-t", "--rotation_translation_max_ratio", default=10, dest="rotation_translation_max_ratio",
+                        help="Rotation translation max ratio")
     args = parser.parse_args()
     DATA_FILE = args.file
     DATA_NAME = args.name
@@ -73,6 +77,7 @@ def load_params(config_file_path=None):
     ACCURACY = int(args.accuracy)
     PI_FRACTION = int(args.rotation_fraction)
     FROM_ORIGIN_DELTA_PERCENTS = int(args.distance_delta_from_origin)
+    ROTATION_TRANSLATION_MAX_RATIO = int(args.rotation_translation_max_ratio)
     if config_file_path is not None or args.configuration is not None:
         CONFIG_FILE = config_file_path
         config = ConfigParser()
@@ -100,6 +105,8 @@ def load_params(config_file_path=None):
         STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
         if config.has_option('EXECUTION', 'deep_iterations'):
             ITERATIONS = int(config.get('EXECUTION', 'deep_iterations'))
+        if config.has_option('EXECUTION', 'rotation_translation_max_ratio'):
+            ROTATION_TRANSLATION_MAX_RATIO = int(config.get('EXECUTION', 'rotation_translation_max_ratio'))
 
         if config.has_option('HYPERPLANES', 'hyperplanes'):
             HYPERPLANES = int(config.get('HYPERPLANES', 'hyperplanes'))
