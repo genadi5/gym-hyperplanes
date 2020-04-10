@@ -1,0 +1,14 @@
+! test.apm
+Variables
+  x1 = 0, >=0, <=100
+  x2 = 0, >=0, <=100
+End Variables
+
+Equations
+  minimize x1*x1 + x2*x2
+
+  1*x1 + 1*x2 >= 1.5
+  1*x1 + 1*x2 <= 4.5
+  -1*x1 + 1*x2 >= -1
+  -1*x1 + 1*x2 <= 3
+End Equations
