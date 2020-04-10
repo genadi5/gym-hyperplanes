@@ -31,7 +31,7 @@ def create_execution(iter, config, data=None, boundaries=None):
 
 
 WORKERS = os.cpu_count()
-WORKERS = int(WORKERS / 2)
+WORKERS = math.ceil(WORKERS * 0.8)
 # WORKERS = WORKERS * 2
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
@@ -127,4 +127,4 @@ def execute():
         output_file = pm.HYPERPLANES_FILE
     else:
         output_file = '{}_result.txt'.format(execution_name)
-    hs.save_hyperplanes_state(hp_states, pm.MODEL_FOLDER + output_file)
+    hs.save_hyperplanes_state(hp_states, output_file)

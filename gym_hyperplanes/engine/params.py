@@ -7,7 +7,6 @@ DATA_NAME = 'test_' + time.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_').repla
 DATA_FILE = None
 CONFIG_FILE = None
 HYPERPLANES_FILE = None
-MODEL_FOLDER = None
 ITERATIONS = 10
 ACCURACY = 95
 PI_FRACTION = 6
@@ -27,7 +26,6 @@ def load_params(config_file_path=None):
     global DATA_FILE
     global CONFIG_FILE
     global DATA_NAME
-    global MODEL_FOLDER
     global HYPERPLANES_FILE
 
     global ENTRY_LEVELS
@@ -67,7 +65,6 @@ def load_params(config_file_path=None):
     args = parser.parse_args()
     DATA_FILE = args.file
     DATA_NAME = args.name
-    MODEL_FOLDER = args.model_folder
 
     STEPS = int(args.episode_steps)
     STEPS_NO_REWARD_IMPROVEMENTS_PART = int(args.no_improvement_in_reward)
@@ -86,8 +83,6 @@ def load_params(config_file_path=None):
             DATA_FILE = config.get('DATA', 'data_file')
         if config.has_option('DATA', 'data_name'):
             DATA_NAME = config.get('DATA', 'data_name')
-        if config.has_option('DATA', 'model_folder'):
-            MODEL_FOLDER = config.get('DATA', 'model_folder')
         if config.has_option('DATA', 'hyperplanes_file'):
             HYPERPLANES_FILE = config.get('DATA', 'hyperplanes_file')
 

@@ -1,9 +1,10 @@
 import logging
 import operator
 
-import gym_hyperplanes.states.hyperplanes_state as hs
 import numpy as np
 import pandas as pd
+
+import gym_hyperplanes.states.hyperplanes_state as hs
 
 
 def make_area(array, powers):
@@ -130,11 +131,26 @@ def test():
     print(score)
 
 
+def test_games():
+    result_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/GamesSingle/Games_single.hs'
+
+    hp_states = hs.load_hyperplanes_state(result_file)
+    classifier = DeepHyperplanesClassifier(hp_states)
+
+    data_files = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/GamesSingle/Games_single.txt'
+    data = pd.read_csv(data_files, header=None)
+    X = data.iloc[:, :-1]
+    y = data.iloc[:, -1]
+
+    print(classifier.score(X, y))
+
+
 def main():
     logging.basicConfig(filename='classifier_run.log', format='%(asctime)s %(levelname)s:%(message)s',
                         level=logging.DEBUG)
     # logging.info('Classifier start')
-    test_pendigits()
+    # test_pendigits()
+    test_games()
     # logging.info('Classifier finished')
 
 

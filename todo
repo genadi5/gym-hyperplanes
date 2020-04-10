@@ -4,6 +4,7 @@
 4. Multi-threading on execution --> in progress --> Done
 5. If we have two areas (one in another) have same boundary than we have to do something with this --> Not relevant
 7. Optimization of reward calculation --> Done
+13. which part of actions should be movement of hyperplane from all the movements --> Done
 
 6. Use SARSA instead DQN ????
 8. Full loop:
@@ -14,5 +15,9 @@
 9. Maybe change reward evaluation - for example amount of grouped (by sufficient accuracy) but not including singles
 10. Further performance optimization - find where we loose
 11. Documentation
-12. Limit minimum of instances in area from below
-13. which part of actions should be movement of hyperplane from all the movements
+12. Limit minimum of instances in area from below, meaning that 1 instance (for example) in area is not acceptable
+13. New policy - best reward by number of isolated instances
+14. Which among all classes is the nearest
+15. Set of points from the nearest class area
+16. Probability of class
+17. If no changes on execution - don't continue

@@ -1,8 +1,11 @@
 import logging
 import math
+import time
 
 import numpy as np
 import numpy_indexed as npi
+
+import gym_hyperplanes.engine.params as pm
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
 from gym_hyperplanes.states.missed_areas import MissedAreas
@@ -74,6 +77,9 @@ class StateManipulator:
         # (self.hyperplane_params_dimension * x + y) while if we decide to decrease it will be
         # (self.hyperplane_params_dimension * x + y + 1)
         # we can decide to increase/decrease angle to axis or move to/from origin
+        # so actions are encoded as follows:
+        # |                 hyperplane 0             |                 hyperplane 1             |..| hyperplane n-1
+        # |r0_up,r0_down,..,rm_up,rm_down,t_up,t_down,r0_up,r0_down,..,rm_up,rm_down,t_up,t_down,..,r0_up,r0_down,..
         self.actions_number = (self.features + 1) * self.hyperplanes * 2  # for 2 directions
         # overall states depends on number of hyperplane and their dimension (number of features)
 
@@ -102,6 +108,8 @@ class StateManipulator:
         self.total_areas = 0
 
         self.actions_done = 0
+        self.rotations_done = 0
+        self.translations_done = 1  # we assume we have done on translation (on init)
 
     def get_hp_state(self, complete):
         if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -183,16 +191,19 @@ class StateManipulator:
 
     def apply_action(self, action):
         self.actions_done += 1
-        action_index = int(action / 2)
+        hyperplane = int(action / ((self.features + 1) * 2))
+        start_hyperplane = hyperplane * (self.features + 1) * 2
+
+        action_index = int((action - start_hyperplane) / 2)
         action_direction = UP if action % 2 == 0 else DOWN
 
-        hp_ind = self.get_hp_index(action_index)
-
-        if (action_index > 0) and ((action_index % self.features) == 0):
-            self.apply_translation(hp_ind, action_direction)
+        if (action_index > 0) and (((action_index + 1) % (self.features + 1)) == 0):
+            self.apply_translation(hyperplane, action_direction)
+            self.translations_done += 1
         else:
             feature_ind = self.get_feature_index(action_index)
-            self.apply_rotation(hp_ind, feature_ind, action_direction)
+            self.apply_rotation(hyperplane, feature_ind, action_direction)
+            self.rotations_done += 1
         self.copy_state()
 
     def apply_translation(self, hp_ind, action_direction):
@@ -252,15 +263,20 @@ class StateManipulator:
                 self.hp_state[feature_ind, hp_ind] = sign * math.sqrt(res)
         return compensated
 
-    def get_hp_index(self, action):
-        return int(action / (self.features + 1))
-
     def get_feature_index(self, action):
         return action % self.features
 
     def sample(self):
-        selected_action = np.random.randint(0, self.actions_number)
-        return selected_action
+        if (self.rotations_done / self.translations_done) < pm.ROTATION_TRANSLATION_MAX_RATIO:
+            action = np.random.randint(0, self.actions_number)
+        else:
+            # print('Not enough translations {} while rotations {} ration ro be up to {}'.
+            #       format(self.translations_done, self.rotations_done, pm.ROTATION_TRANSLATION_MAX_RATIO))
+            hyperplane = np.random.randint(0, self.hyperplanes)
+            start_hyperplane = hyperplane * (self.features + 1) * 2
+            start_hyperplane_translation = start_hyperplane + self.features * 2
+            action = start_hyperplane_translation + round(time.time()) % 2
+        return action
 
     def calc_sqr_cos_sum(self, hp_ind, replace_value=None, feature_ind=None):
         res = sum(pow(self.hp_state[:, hp_ind], 2))
