@@ -40,14 +40,30 @@ def make_area(array, powers):
 
 
 def calculate_areas(indices, sides, powers, areas, data_provider):
+    # all these indices are of same side so let's take example
     unique_side = sides[indices[0]]
-    labels = data_provider.get_labels()
-    classes = np.take(labels, indices)
+    # get all classes of these indices
+    classes = np.take(data_provider.get_labels(), indices)
+    probabilities = np.take(data_provider.get_labels_probabilities(), indices)
+    # get indices by classes
     labels_indices = npi.group_by(classes).split(np.arange(len(classes)))
-    classes_count = {classes.iloc[labels_ind[0]]: len(labels_ind) for labels_ind in labels_indices}
+    # and count how much of of each class we have
+    classes_count = {classes[labels_ind[0]]: np.take(probabilities, labels_ind)
+                     for labels_ind in labels_indices}
 
     area = np.bitwise_or.reduce(powers[unique_side])
     areas[area] = classes_count
+
+
+def calculate_area_accuracy(area_classes):
+    sm = 0
+    mx = 0
+    for key, val in area_classes.items():
+        count = len(val)
+        sm += count
+        if count > mx:
+            mx = count
+    return sm, mx, math.ceil((mx * 100) / sm)
 
 
 class StateManipulator:
@@ -119,21 +135,19 @@ class StateManipulator:
         signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
         areas = np.apply_along_axis(make_area, 1, signs, self.powers)
         for area, value in self.best_areas.items():
-            sm = sum(value.values())
-            mx = max(value.values())
-            accuracy = math.ceil((mx * 100) / sm)
+            _, _, accuracy = calculate_area_accuracy(value)
             if not complete:
                 if accuracy < self.area_accuracy:
-                    area_data = self.data_provider.get_data()[areas == area]
+                    area_data = self.data_provider.get_area_data(areas == area)
                     missed_areas[area] = area_data
                     copy_best_areas.pop(area, None)
                     if logging.getLogger().isEnabledFor(logging.DEBUG):
                         print_area(area, area_data, 'extracting {}'.format(accuracy))
                 elif logging.getLogger().isEnabledFor(logging.DEBUG):
-                    area_data = self.data_provider.get_data()[areas == area]
+                    area_data = self.data_provider.get_area_data(areas == area)
                     print_area(area, area_data, 'preserving with {}'.format(accuracy))
             elif logging.getLogger().isEnabledFor(logging.DEBUG):
-                area_data = self.data_provider.get_data()[areas == area]
+                area_data = self.data_provider.get_area_data(areas == area)
                 print_area(area, area_data, 'preserving with {}'.format(accuracy))
 
         if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -176,9 +190,7 @@ class StateManipulator:
         the_worst_accuracy = None
         count_area_misses = 0
         for key, value in areas.items():
-            sm = sum(value.values())
-            mx = max(value.values())
-            curr_area_accuracy = math.ceil((mx * 100) / sm)
+            sm, mx, curr_area_accuracy = calculate_area_accuracy(value)
             if the_worst_accuracy is None or the_worst_accuracy > curr_area_accuracy:
                 the_worst_accuracy = curr_area_accuracy
             count_area_misses -= 0 if curr_area_accuracy >= self.area_accuracy else sm - mx

@@ -1,5 +1,4 @@
 import logging
-import operator
 
 import numpy as np
 import pandas as pd
@@ -20,6 +19,15 @@ def score(classifier, X, y):
             count += 1
 
     return (count * 100) / max(len(pred), len(y))
+
+
+def is_in_bound(index, boundaries, result):
+    for boundary in boundaries:
+        b_key = make_area(boundary[1][index], boundary[2])
+        if b_key != boundary[0]:
+            result.append(None)
+            return False
+    return True
 
 
 class HyperplanesClassifier:
@@ -43,23 +51,24 @@ class HyperplanesClassifier:
         result = []
 
         for i, side in enumerate(sides):
-            if not self.is_in_bound(i, boundaries, result):
+            if not is_in_bound(i, boundaries, result):
                 continue
             key = make_area(side, self.powers)
-            cls = None if key not in self.hyperplane_state.areas_to_classes \
+            classes = None if key not in self.hyperplane_state.areas_to_classes \
                 else self.hyperplane_state.areas_to_classes[key]
             # if got None meaning it is out of area
-            result.append(None if cls is None else max(cls.items(), key=operator.itemgetter(1))[0])
+            if classes is not None:
+                cls = None
+                max_len = 0
+                for c, probs in classes.items():
+                    if cls is None or len(probs) > max_len:
+                        cls = c
+                        max_len = len(probs)
+                result.append(cls)
+            else:
+                result.append(None)
 
         return np.array(result)
-
-    def is_in_bound(self, index, boundaries, result):
-        for boundary in boundaries:
-            b_key = make_area(boundary[1][index], boundary[2])
-            if b_key != boundary[0]:
-                result.append(None)
-                return False
-        return True
 
     def score(self, X, y):
         return score(self, X, y)

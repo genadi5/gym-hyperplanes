@@ -5,13 +5,13 @@
 5. If we have two areas (one in another) have same boundary than we have to do something with this --> Not relevant
 7. Optimization of reward calculation --> Done
 13. which part of actions should be movement of hyperplane from all the movements --> Done
-
-6. Use SARSA instead DQN ????
-8. Full loop:
+8. Full loop: --> Done
     a. Train some reliable classification model
     b. get train and build hyperplane system with high prediction score
     c. get instances and propose change to get them to some class
     d. Check proposed changes in models from a.
+
+6. Use SARSA instead DQN ????
 9. Maybe change reward evaluation - for example amount of grouped (by sufficient accuracy) but not including singles
 10. Further performance optimization - find where we loose
 11. Documentation

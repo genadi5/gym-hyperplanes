@@ -79,7 +79,6 @@ def load0000_major(file_name):
         instances.append(instance + '\n')
     return instances
 
-
 def games0001():
     instances = []
     instances += load0001('/UP/Teza/data/Games0001_processed_all.txt')
@@ -128,6 +127,21 @@ def load0001(file_name):
     return instances
 
 
+def games_major():
+    instances = []
+    instances += load0000_major('/UP/Teza/data/Games0000_1processed.txt')
+    instances += load0000_major('/UP/Teza/data/Games0000_2processed.txt')
+    instances += load0000_major('/UP/Teza/data/Games0000_3processed.txt')
+    instances += load0000_major('/UP/Teza/data/Games0000_4processed.txt')
+    instances += load0001_major('/UP/Teza/data/Games0001_processed_all.txt')
+    instances = list(set(instances))
+    instances.sort()
+
+    random.shuffle(instances)
+    with open('/UP/Teza/data/Games_all_single.txt', 'w') as f:
+        f.writelines(instances)
+
+
 def games0001_major():
     instances = []
     instances += load0001_major('/UP/Teza/data/Games0001_processed_all.txt')
@@ -174,7 +188,8 @@ def load0001_major(file_name):
 
 def main():
     # games0000_major()
-    games0001_major()
+    # games0001_major()
+    games_major()
 
 
 if __name__ == "__main__":

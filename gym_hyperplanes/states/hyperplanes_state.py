@@ -43,7 +43,12 @@ class HyperplanesState:
         self.areas_to_classes = areas_to_classes
         self.classes_to_areas = dict()
         for area, classes in self.areas_to_classes.items():
-            cls = max(classes.items(), key=operator.itemgetter(1))[0]
+            cls = None
+            max_len = 0
+            for c, probs in classes.items():
+                if cls is None or len(probs) > max_len:
+                    cls = c
+                    max_len = len(probs)
             class_areas = set() if cls not in self.classes_to_areas else self.classes_to_areas[cls]
             class_areas.add(area)
             self.classes_to_areas[cls] = class_areas
