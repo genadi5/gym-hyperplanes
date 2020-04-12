@@ -7,6 +7,30 @@ import pandas as pd
 from gym_hyperplanes.states.data_provider import DataProvider
 
 
+class InstanceProbability:
+    def __init__(self, class_name, class_frequency, instances_amount):
+        self.class_name = class_name
+        self.class_frequency = class_frequency
+        self.instances_amount = instances_amount
+
+    def get_class_name(self):
+        return self.class_name
+
+    def get_class_frequency(self):
+        return self.class_frequency
+
+    def get_total_amount(self):
+        return self.instances_amount
+
+    def __str__(self):
+        return "{}:({}{}/{})".format(self.class_name, '' if self.class_frequency == self.instances_amount else '!!!',
+                                     self.class_frequency, self.instances_amount)
+
+    def __repr__(self):
+        return "{}:({}{}/{})".format(self.class_name, '' if self.class_frequency == self.instances_amount else '!!!',
+                                     self.class_frequency, self.instances_amount)
+
+
 class DataSetProvider(DataProvider):
     def __init__(self, data_name, data_file, hp_config, data=None):
         super(DataSetProvider, self).__init__(hp_config)
@@ -34,8 +58,7 @@ class DataSetProvider(DataProvider):
                 # in this case we take the first one - no matter which
                 frequent_cls = classes[0]
             data_labels.append(frequent_cls)
-            prob = classes.count(frequent_cls) / len(classes)
-            data_label_probability.append(prob)
+            data_label_probability.append(InstanceProbability(frequent_cls, classes.count(frequent_cls), len(classes)))
 
         self.data_labels = np.array(data_labels)
         self.only_data = np.array(data_rows)

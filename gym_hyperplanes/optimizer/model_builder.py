@@ -59,7 +59,7 @@ def find_closest_point(point, required_class, hp_states, penetration_delta):
     y = classifier.predict(np.array([point]), required_class)
     if y[0] is not None:  # we found area for point
         if y[0] == required_class:  # this is our class!!!
-            return point, None
+            return (point, 0), None
 
     constraints_set_list = []
     results = []
@@ -112,4 +112,4 @@ def find_closest_point(point, required_class, hp_states, penetration_delta):
                 the_closest_point = result
                 the_closest_constraints_set = constraints_set
     print(the_closest_point)
-    return the_closest_point[0], the_closest_constraints_set
+    return the_closest_point, the_closest_constraints_set

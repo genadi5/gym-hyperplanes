@@ -10,14 +10,13 @@
     b. get train and build hyperplane system with high prediction score
     c. get instances and propose change to get them to some class
     d. Check proposed changes in models from a.
+16. Probabilities - not only probability but also the amount of instances --> Done
 
 6. Use SARSA instead DQN ????
-9. Maybe change reward evaluation - for example amount of grouped (by sufficient accuracy) but not including singles
+9. Maybe change reward evaluation - for example amount of grouped/isolated (by sufficient accuracy) but not including singles
 10. Further performance optimization - find where we loose
 11. Documentation
 12. Limit minimum of instances in area from below, meaning that 1 instance (for example) in area is not acceptable
-13. New policy - best reward by number of isolated instances
-14. Which among all classes is the nearest
-15. Set of points from the nearest class area
-16. Probability of class
-17. If no changes on execution - don't continue
+15. Feature - Set of points from the nearest class area
+17. Feature - Probability of class to use - when to use it in selection of the nearest class
+18. If no changes on execution - don't continue

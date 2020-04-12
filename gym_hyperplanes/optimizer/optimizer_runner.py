@@ -18,7 +18,7 @@ def execute():
         print('Starting instance {}'.format(instance))
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta)
         print('+++++ For instance {} closest point {} in constraint {}'.format(instance, result, constraints))
-        results.append(result)
+        results.append(result[0])
     if pm.TRAIN_SET is not None:
         print('Starting testing prediction')
         X = np.array(results)
