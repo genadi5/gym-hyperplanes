@@ -16,7 +16,8 @@
 9. Maybe change reward evaluation - for example amount of grouped/isolated (by sufficient accuracy) but not including singles
 10. Further performance optimization - find where we loose
 11. Documentation
-12. Limit minimum of instances in area from below, meaning that 1 instance (for example) in area is not acceptable
+12. ??? Limit minimum of instances in area from below, meaning that 1 instance (for example) in area is not acceptable
 15. Feature - Set of points from the nearest class area
 17. Feature - Probability of class to use - when to use it in selection of the nearest class
-18. If no changes on execution - don't continue
+18. ???If no changes on execution - don't continue
+19. Clean up project
