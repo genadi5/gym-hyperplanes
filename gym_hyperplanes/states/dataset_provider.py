@@ -23,12 +23,12 @@ class InstanceProbability:
         return self.instances_amount
 
     def __str__(self):
-        return "{}:({}{}/{})".format(self.class_name, '' if self.class_frequency == self.instances_amount else '!!!',
-                                     self.class_frequency, self.instances_amount)
+        return "{}{}/{}".format('' if self.class_frequency == self.instances_amount else '#', self.class_frequency,
+                                self.instances_amount)
 
     def __repr__(self):
-        return "{}:({}{}/{})".format(self.class_name, '' if self.class_frequency == self.instances_amount else '!!!',
-                                     self.class_frequency, self.instances_amount)
+        return "{}{}/{}".format('' if self.class_frequency == self.instances_amount else '#', self.class_frequency,
+                                self.instances_amount)
 
 
 class DataSetProvider(DataProvider):

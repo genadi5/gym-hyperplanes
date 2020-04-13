@@ -159,9 +159,6 @@ class StateManipulator:
                                                                        self.data_provider.get_features_minimums(),
                                                                        self.data_provider.get_features_maximums())
 
-    def get_state(self):
-        return self.state
-
     def calculate_reward(self):
         areas, count_area_misses, best_reward_worst_accuracy = self._calculate_ratio()
 
@@ -347,12 +344,19 @@ class StateManipulator:
         return self.state
 
     def print_state(self, title):
-        print('+++++{}+++++++++++++++++++++++++++'.format(title))
+        start_msg = '+++++{}+++++++++++++++++++++++++++'.format(title)
+        logging.debug(start_msg)
+        print(start_msg)
         # print(self.build_state(self.best_state, 'best state:'))
-        print('best areas:' + str(self.best_areas))
-        print('best reward {} with worst accuracy {}, data size [{}]:'.
-              format(self.best_reward, self.best_reward_worst_accuracy, self.data_provider.get_data_size()))
-        print('***********************************************')
+        logging.debug('best areas:' + str(self.best_areas))
+        end_msg = 'best reward {} with worst accuracy {}, data size [{}]:'.format(self.best_reward,
+                                                                                  self.best_reward_worst_accuracy,
+                                                                                  self.data_provider.get_data_size())
+        logging.debug(end_msg)
+        print(end_msg)
+        end_end_msg = '***********************************************'
+        logging.debug(end_end_msg)
+        print(end_end_msg)
 
     def build_state(self, state, name):
         s = name
@@ -361,3 +365,15 @@ class StateManipulator:
             s = s + delimiter + str(round(st, 3))
             delimiter = ' '
         return s
+
+    def get_state(self):
+        return self.state
+
+    def get_best_reward(self):
+        return self.best_reward
+
+    def get_data_size(self):
+        return self.data_provider.get_data_size()
+
+    def get_actions_done(self):
+        return self.actions_done

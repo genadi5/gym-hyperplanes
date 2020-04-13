@@ -1,5 +1,5 @@
 import numpy as np
-
+import time
 import gym_hyperplanes.classifiers.classic_classification as ccc
 import gym_hyperplanes.optimizer.model_builder as mb
 import gym_hyperplanes.optimizer.params as pm
@@ -14,10 +14,13 @@ def execute():
     penetration_delta = pm.PENETRATION_DELTA
     results = []
 
-    for instance in instances:
-        print('Starting instance {}'.format(instance))
+    start = time.time()
+    for i, instance in enumerate(instances):
+        print('>>>>> Starting #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
+        start_instance = time.time()
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta)
-        print('+++++ For instance {} closest point {} in constraint {}'.format(instance, result, constraints))
+        print('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in constraint {}'.
+              format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result, constraints))
         results.append(result[0])
     if pm.TRAIN_SET is not None:
         print('Starting testing prediction')
