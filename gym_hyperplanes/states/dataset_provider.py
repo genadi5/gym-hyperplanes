@@ -97,8 +97,6 @@ class DataSetProvider(DataProvider):
 
     def get_area_data(self, area_array):
         instances = self.only_data[area_array]
-        if self.data.shape[0] == self.only_data.shape[0]:
-            return instances
         indexes = []
         for instance in instances:
             instance_indexes = self.groups.get(tuple(instance))
