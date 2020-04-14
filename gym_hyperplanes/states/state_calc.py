@@ -121,20 +121,33 @@ class StateManipulator:
         self.best_reward = None
         self.best_reward_worst_accuracy = None
 
+        self.best_hp_state_ever = None
+        self.best_hp_dist_ever = None
+        self.best_state_ever = None
+        self.best_areas_ever = None
+        self.best_reward_ever = None
+        self.best_reward_worst_accuracy_ever = None
+
         self.total_areas = 0
 
+        self.restarts = -1
         self.actions_done = 0
         self.rotations_done = 0
         self.translations_done = 1  # we assume we have done on translation (on init)
+        self.thousand_time = time.time()
+        self.thousand_took = 0
+        self.start_time = time.time()
+        self.reset_stats()
 
     def get_hp_state(self, complete):
         if logging.getLogger().isEnabledFor(logging.DEBUG):
-            print_state(self.best_hp_state, self.best_hp_dist, self.best_areas, self.best_reward, 'Start state')
-        copy_best_areas = dict(self.best_areas)
+            print_state(self.best_hp_state_ever, self.best_hp_dist_ever, self.best_areas_ever, self.best_reward_ever,
+                        'Start state')
+        copy_best_areas = dict(self.best_areas_ever)
         missed_areas = {}
-        signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state) - self.best_hp_dist
+        signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state_ever) - self.best_hp_dist_ever
         areas = np.apply_along_axis(make_area, 1, signs, self.powers)
-        for area, value in self.best_areas.items():
+        for area, value in self.best_areas_ever.items():
             _, _, accuracy = calculate_area_accuracy(value)
             if not complete:
                 if accuracy < self.area_accuracy:
@@ -152,16 +165,18 @@ class StateManipulator:
 
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             logging.debug('+++ Finished state')
-        return MissedAreas(missed_areas, self.best_hp_state, self.best_hp_dist), \
-               None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state,
-                                                                       self.best_hp_dist, copy_best_areas,
-                                                                       self.best_reward,
+        return MissedAreas(missed_areas, self.best_hp_state_ever, self.best_hp_dist_ever), \
+               None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state_ever,
+                                                                       self.best_hp_dist_ever, copy_best_areas,
+                                                                       self.best_reward_ever,
                                                                        self.data_provider.get_features_minimums(),
                                                                        self.data_provider.get_features_maximums())
 
     def calculate_reward(self):
         areas, count_area_misses, best_reward_worst_accuracy = self._calculate_ratio()
-
+        if self.actions_done % 1000 == 0:
+            self.thousand_took = round(time.time() - self.thousand_time)
+            self.thousand_time = time.time()
         if self.best_reward is None or self.best_reward < count_area_misses:
             self.best_reward = count_area_misses
             self.best_reward_worst_accuracy = round(best_reward_worst_accuracy)
@@ -170,6 +185,22 @@ class StateManipulator:
             self.best_state = np.copy(self.state)
             self.best_areas = areas
             self.print_state('Best reward [{}]'.format(self.best_reward))
+
+            if self.best_reward_ever is None or self.best_reward_ever < self.best_reward:
+                best_reward_ever_before = self.best_reward_ever
+                self.best_reward_ever = self.best_reward
+
+                self.best_reward_worst_accuracy_ever = self.best_reward_worst_accuracy
+                self.best_hp_state_ever = self.best_hp_state
+                self.best_hp_dist_ever = self.best_hp_dist
+                self.best_state_ever = self.best_state
+                self.best_areas_ever = self.best_areas
+                self.print_state('!!! Best reward ever [{}] from [{}] in episode {}'.
+                                 format(self.best_reward_ever, best_reward_ever_before, self.restarts))
+        elif self.actions_done % 1000 == 0:
+            self.print_state('steps [1000/{}] in [{}] secs, current reward [{}], total time [{}] in [{}] restarts'.
+                             format(self.actions_done, self.thousand_took, count_area_misses,
+                                    round(time.time() - self.start_time), self.restarts))
 
         return count_area_misses
 
@@ -192,11 +223,6 @@ class StateManipulator:
                 the_worst_accuracy = curr_area_accuracy
             count_area_misses -= 0 if curr_area_accuracy >= self.area_accuracy else sm - mx
         return areas, count_area_misses, the_worst_accuracy
-
-    def stats(self):
-        if self.actions_done % 10 == 0:
-            avrg_areas = self.total_areas / self.actions_done
-            print('{} actions, {} areas, '.format(self.actions_done, avrg_areas))
 
     def apply_action(self, action):
         self.actions_done += 1
@@ -320,7 +346,18 @@ class StateManipulator:
         self.best_state = np.copy(self.state)
         return True
 
+    def reset_stats(self):
+        self.restarts += 1
+        self.actions_done = 0
+        self.rotations_done = 0
+        self.translations_done = 1  # we assume we have done on translation (on init)
+        self.thousand_time = 0
+        self.thousand_took = 0
+        self.start_time = time.time()
+
     def reset(self):
+        self.reset_stats()
+
         self.best_hp_state = None
         self.best_hp_dist = None
         self.best_state = None
@@ -344,14 +381,14 @@ class StateManipulator:
         return self.state
 
     def print_state(self, title):
-        start_msg = '+++++{}+++++++++++++++++++++++++++'.format(title)
+        start_msg = '+++ {}+++'.format(title)
         logging.debug(start_msg)
         print(start_msg)
         # print(self.build_state(self.best_state, 'best state:'))
         logging.debug('best areas:' + str(self.best_areas))
-        end_msg = 'best reward {} with worst accuracy {}, data size [{}]:'.format(self.best_reward,
-                                                                                  self.best_reward_worst_accuracy,
-                                                                                  self.data_provider.get_data_size())
+        end_msg = 'best reward [{}] with worst accuracy [{}], data size [{}], steps [{}], restart [{}]:'. \
+            format(self.best_reward, self.best_reward_worst_accuracy, self.data_provider.get_data_size(),
+                   self.actions_done, self.restarts)
         logging.debug(end_msg)
         print(end_msg)
         end_end_msg = '***********************************************'
@@ -370,7 +407,7 @@ class StateManipulator:
         return self.state
 
     def get_best_reward(self):
-        return self.best_reward
+        return self.best_reward_ever
 
     def get_data_size(self):
         return self.data_provider.get_data_size()
