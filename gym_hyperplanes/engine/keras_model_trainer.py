@@ -28,25 +28,21 @@ class TargetReachedCallback(Callback):
 def execute_hyperplane_search(state_manipulator, config):
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
     env.set_state_manipulator(state_manipulator)
-    nb_actions = env.get_actions_number()
 
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + env.get_state().shape))
-    model.add(Dense(64))
+    model.add(Dense(128))
     model.add(Activation('relu'))
-    model.add(Dense(64))
+    model.add(Dense(128))
     model.add(Activation('relu'))
-    model.add(Dense(64))
+    model.add(Dense(128))
     model.add(Activation('relu'))
-    model.add(Dense(nb_actions))
-    model.add(Activation('linear'))
+    model.add(Dense(env.get_actions_number()))
+    model.add(Activation('softmax'))  # linear
 
-    memory = SequentialMemory(limit=config.get_max_steps(), window_length=1)
-    policy = BoltzmannQPolicy()
-
-    dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=10,
-                   target_model_update=1e-2, policy=policy)
-    dqn.compile(Adam(lr=0.05), metrics=['mae'])
+    dqn = DQNAgent(model=model, nb_actions=env.get_actions_number(), nb_steps_warmup=10, policy=BoltzmannQPolicy(),
+                   target_model_update=1e-2, memory=SequentialMemory(limit=config.get_max_steps(), window_length=1))
+    dqn.compile(Adam(lr=0.05))
 
     start_time = time.time()
     dqn.fit(env, nb_steps=config.get_max_steps(), verbose=2, nb_max_episode_steps=pm.MAX_EPISODE_STEPS,

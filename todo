@@ -21,3 +21,4 @@
 11. Documentation
 12. ??? Limit minimum of instances in area from below, meaning that 1 instance (for example) in area is not acceptable
 18. ???If no changes on execution - don't continue
+19. Configure episode steps in properties file

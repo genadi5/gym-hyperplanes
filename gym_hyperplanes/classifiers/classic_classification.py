@@ -60,7 +60,7 @@ def main():
     # test_data_file = '/UP/Teza/classoptimizer/pendigits/pendigits.tes'
     # load_train_and_test(train_data_file, test_data_file)
     # load_split_and_test('/UP/Teza/classoptimizer/iris/iris.data')
-    load_split_and_test('/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/GamesSingle/Games_single.txt')
+    load_split_and_test('/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt')
 
 
 if __name__ == "__main__":

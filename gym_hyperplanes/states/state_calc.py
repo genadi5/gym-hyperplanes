@@ -121,6 +121,7 @@ class StateManipulator:
         self.best_reward = None
         self.best_reward_worst_accuracy = None
 
+        self.best_restart_ever = None
         self.best_hp_state_ever = None
         self.best_hp_dist_ever = None
         self.best_state_ever = None
@@ -189,6 +190,7 @@ class StateManipulator:
             if self.best_reward_ever is None or self.best_reward_ever < self.best_reward:
                 best_reward_ever_before = self.best_reward_ever
                 self.best_reward_ever = self.best_reward
+                self.best_restart_ever = self.restarts
 
                 self.best_reward_worst_accuracy_ever = self.best_reward_worst_accuracy
                 self.best_hp_state_ever = self.best_hp_state
@@ -351,7 +353,7 @@ class StateManipulator:
         self.actions_done = 0
         self.rotations_done = 0
         self.translations_done = 1  # we assume we have done on translation (on init)
-        self.thousand_time = 0
+        self.thousand_time = time.time()
         self.thousand_took = 0
         self.start_time = time.time()
 
@@ -381,19 +383,19 @@ class StateManipulator:
         return self.state
 
     def print_state(self, title):
-        start_msg = '+++ {}+++'.format(title)
-        logging.debug(start_msg)
-        print(start_msg)
+        sm = '+++++++++++++++++++++++++++++++++++++ {} +++++++++++++++++++++++++++++++++++++'.format(title)
+        logging.debug(sm)
+        print(sm)
         # print(self.build_state(self.best_state, 'best state:'))
         logging.debug('best areas:' + str(self.best_areas))
-        end_msg = 'best reward [{}] with worst accuracy [{}], data size [{}], steps [{}], restart [{}]:'. \
-            format(self.best_reward, self.best_reward_worst_accuracy, self.data_provider.get_data_size(),
-                   self.actions_done, self.restarts)
-        logging.debug(end_msg)
-        print(end_msg)
-        end_end_msg = '***********************************************'
-        logging.debug(end_end_msg)
-        print(end_end_msg)
+        em = 'best reward[{}],worst accuracy[{}],best reward ever[{}],restart[{}],data[{}],steps[{}],restart[{}]:'. \
+            format(self.best_reward, self.best_reward_worst_accuracy, self.best_reward_ever, self.best_restart_ever,
+                   self.data_provider.get_data_size(), self.actions_done, self.restarts)
+        logging.debug(em)
+        print(em)
+        eem = '************************************************************************************************'
+        logging.debug(eem)
+        print(eem)
 
     def build_state(self, state, name):
         s = name

@@ -2,6 +2,21 @@ import random
 
 import numpy as np
 
+BASE_CHAR = 'A'
+
+
+def games():
+    instances = []
+    instances += load0000('/UP/Teza/data/Games0000_1processed.txt')
+    instances += load0000('/UP/Teza/data/Games0000_2processed.txt')
+    instances += load0000('/UP/Teza/data/Games0000_3processed.txt')
+    instances += load0000('/UP/Teza/data/Games0000_4processed.txt')
+    instances += load0001('/UP/Teza/data/Games0001_processed_all.txt')
+
+    # random.shuffle(instances)
+    with open('/UP/Teza/data/Games.txt', 'w') as f:
+        f.writelines(instances)
+
 
 def games0000():
     instances = []
@@ -10,8 +25,8 @@ def games0000():
     instances += load0000('/UP/Teza/data/Games0000_3processed.txt')
     instances += load0000('/UP/Teza/data/Games0000_4processed.txt')
 
-    random.shuffle(instances)
-    with open('/UP/Teza/data/Games0000_all_data.txt', 'w') as f:
+    # random.shuffle(instances)
+    with open('/UP/Teza/data/Games0000.txt', 'w') as f:
         f.writelines(instances)
 
 
@@ -39,7 +54,7 @@ def load0000(file_name):
             frequency = frequencies[index + f]
             class_id = f + 1
             for i in range(0, frequency):
-                instances.append(instance + "," + str(class_id) + '\n')
+                instances.append(instance + "," + str(chr(ord(BASE_CHAR) + (class_id - 1))) + '\n')
     return instances
 
 
@@ -50,7 +65,7 @@ def games0000_major():
     instances += load0000_major('/UP/Teza/data/Games0000_3processed.txt')
     instances += load0000_major('/UP/Teza/data/Games0000_4processed.txt')
 
-    random.shuffle(instances)
+    # random.shuffle(instances)
     with open('/UP/Teza/data/Games0000_all_single.txt', 'w') as f:
         f.writelines(instances)
 
@@ -79,12 +94,13 @@ def load0000_major(file_name):
         instances.append(instance + '\n')
     return instances
 
+
 def games0001():
     instances = []
     instances += load0001('/UP/Teza/data/Games0001_processed_all.txt')
 
-    random.shuffle(instances)
-    with open('/UP/Teza/data/Games0001_all_data.txt', 'w') as f:
+    # random.shuffle(instances)
+    with open('/UP/Teza/data/Games0001.txt', 'w') as f:
         f.writelines(instances)
 
 
@@ -120,10 +136,10 @@ def load0001(file_name):
             instance += delimiter + r
             delimiter = ','
         for f in range(0, 3):
-            frequency = frequencies[f]
+            frequency = round(frequencies[f] * 0.74)
             class_id = f + 1
             for i in range(0, frequency):
-                instances.append(instance + "," + str(class_id) + '\n')
+                instances.append(instance + "," + str(chr(ord(BASE_CHAR) + (class_id - 1))) + '\n')
     return instances
 
 
@@ -189,7 +205,10 @@ def load0001_major(file_name):
 def main():
     # games0000_major()
     # games0001_major()
-    games_major()
+    # games_major()
+    games0000();
+    games0001();
+    games();
 
 
 if __name__ == "__main__":
