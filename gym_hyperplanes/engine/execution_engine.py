@@ -47,7 +47,7 @@ def execute_search(execution, config_file):
 
     msg = '$$$$$$$$$$$$$ Starting {} iteration with {} hyperplanes on data size {} $$$$$$$$$$$$$'. \
         format(execution.get_deep_level(), execution.get_config().get_hyperplanes(),
-               execution.data_provider.get_data_size())
+               execution.data_provider.get_actual_data_size())
     print(msg)
     logging.info(msg)
 

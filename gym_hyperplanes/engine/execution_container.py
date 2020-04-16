@@ -18,4 +18,4 @@ class ExecutionContainer:
         return self.boundaries
 
     def get_data_size(self):
-        return self.data_provider.get_data_size()
+        return self.data_provider.get_actual_data_size()

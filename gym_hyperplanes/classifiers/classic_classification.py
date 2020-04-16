@@ -7,7 +7,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 
-def run_classifiers(X_train, X_test, y_train, y_test):
+def run_classifiers(X_train, X_test, y_train, y_test, cls=''):
     names = ["Nearest Neighbors", "Linear SVM", "RBF SVM",
              "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
 
@@ -21,22 +21,28 @@ def run_classifiers(X_train, X_test, y_train, y_test):
         AdaBoostClassifier()]
 
     for name, clf in zip(names, classifiers):
+        print('Starting evaluation of {} for class {}'.format(name, cls))
         clf.fit(X_train, y_train)
-        predict = clf.predict(X_test)
-        print('Predicted {}'.format(predict))
+        # predict = clf.predict(X_test)
+        # print('For class {} predicted {}'.format(y_train[0], predict))
         score = clf.score(X_test, y_test)
 
-        print('Name: [', name, '], Score: [', score, ']')
+        print('For class {} -  Name: [{}], Score: [{}]'.format(cls, name, score))
 
 
 def load_split_and_test(data_file):
+    print('Loading data from {}'.format(data_file))
     data = pd.read_csv(data_file, header=None)
 
     X = data.iloc[:, :-1]
     y = data.iloc[:, -1]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=42)
-    run_classifiers(X_train, X_test, y_train, y_test)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3, random_state=42)
+
+    for cls in set(y_test):
+        x_cls_test = X_test[y_test == cls]
+        y_cls_test = y_test[y_test == cls]
+        run_classifiers(X_train, x_cls_test, y_train, y_cls_test, cls)
 
 
 def load_and_test(train_data_file, X_test, y_test):
@@ -60,7 +66,10 @@ def main():
     # test_data_file = '/UP/Teza/classoptimizer/pendigits/pendigits.tes'
     # load_train_and_test(train_data_file, test_data_file)
     # load_split_and_test('/UP/Teza/classoptimizer/iris/iris.data')
-    load_split_and_test('/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt')
+    # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt'
+    # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/iris/iris.data'
+    data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/pendigits/pendigits.tra'
+    load_split_and_test(data_file)
 
 
 if __name__ == "__main__":

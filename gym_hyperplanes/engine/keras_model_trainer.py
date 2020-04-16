@@ -21,7 +21,7 @@ class TargetReachedCallback(Callback):
         self.manipulator = manipulator
 
     def on_action_end(self, action, logs={}):
-        if self.manipulator.get_best_reward() == 0:
+        if self.manipulator.is_done():
             raise KeyboardInterrupt
 
 
@@ -49,5 +49,5 @@ def execute_hyperplane_search(state_manipulator, config):
             callbacks=[TargetReachedCallback(state_manipulator)])
     print('######### DONE [{}] IN [{}] STEPS WITH REWARD {} WITHIN [{}] SECS!!!!!'.
           format(state_manipulator.get_data_size(), state_manipulator.get_actions_done(),
-                 state_manipulator.get_best_reward(), round(time.time() - start_time)))
-    return state_manipulator.get_best_reward() == 0
+                 state_manipulator.get_best_reward_ever(), round(time.time() - start_time)))
+    return state_manipulator.is_done()

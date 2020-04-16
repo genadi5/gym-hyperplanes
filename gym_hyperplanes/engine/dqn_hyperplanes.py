@@ -21,7 +21,7 @@ class TargetReachedCallback(Callback):
         self.manipulator = manipulator
 
     def on_action_end(self, action, logs={}):
-        if self.manipulator.get_best_reward() == 0:
+        if self.manipulator.is_done():
             raise KeyboardInterrupt
 
 

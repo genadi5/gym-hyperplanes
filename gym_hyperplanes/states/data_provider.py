@@ -14,6 +14,9 @@ class DataProvider:
     def get_data_size(self):
         pass
 
+    def get_actual_data_size(self):
+        pass
+
     def get_data(self):
         pass
 
@@ -52,6 +55,9 @@ class TestDataProvider(DataProvider):
         return self.data.shape[1] - 1
 
     def get_data_size(self):
+        return self.data.shape[0]
+
+    def get_actual_data_size(self):
         return self.data.shape[0]
 
     def get_data(self):

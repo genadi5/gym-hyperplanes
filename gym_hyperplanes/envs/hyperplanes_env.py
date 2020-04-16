@@ -36,7 +36,7 @@ class HyperPlanesEnv(gym.Env):
         reward = self.state_manipulator.calculate_reward()
         self.total_reward_time += (round(time.time()) - start_reward)
 
-        return self.state_manipulator.get_state(), reward, reward == 0, {}
+        return self.state_manipulator.get_state(), reward,self.state_manipulator.is_done(), {}
 
     def reset(self):
         return self.state_manipulator.reset()

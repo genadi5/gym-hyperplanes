@@ -92,6 +92,9 @@ class DataSetProvider(DataProvider):
     def get_data_size(self):
         return self.data.shape[0]
 
+    def get_actual_data_size(self):
+        return self.only_data.shape[0]
+
     def get_only_data(self):
         return self.only_data
 

@@ -174,12 +174,12 @@ class StateManipulator:
                                                                        self.data_provider.get_features_maximums())
 
     def calculate_reward(self):
-        areas, count_area_misses, best_reward_worst_accuracy = self._calculate_ratio()
+        areas, reward, best_reward_worst_accuracy = self._calculate_ratio()
         if self.actions_done % 1000 == 0:
             self.thousand_took = round(time.time() - self.thousand_time)
             self.thousand_time = time.time()
-        if self.best_reward is None or self.best_reward < count_area_misses:
-            self.best_reward = count_area_misses
+        if self.best_reward is None or self.best_reward < reward:
+            self.best_reward = reward
             self.best_reward_worst_accuracy = round(best_reward_worst_accuracy)
             self.best_hp_state = np.copy(self.hp_state)
             self.best_hp_dist = np.copy(self.hp_dist)
@@ -201,10 +201,10 @@ class StateManipulator:
                                  format(self.best_reward_ever, best_reward_ever_before, self.restarts))
         elif self.actions_done % 1000 == 0:
             self.print_state('steps [1000/{}] in [{}] secs, current reward [{}], total time [{}] in [{}] restarts'.
-                             format(self.actions_done, self.thousand_took, count_area_misses,
+                             format(self.actions_done, self.thousand_took, reward,
                                     round(time.time() - self.start_time), self.restarts))
 
-        return count_area_misses
+        return reward
 
     def _calculate_ratio(self):
         areas = dict()
@@ -218,13 +218,13 @@ class StateManipulator:
 
         # self.total_areas += (round(time.time()) - start_areas)
         the_worst_accuracy = None
-        count_area_misses = 0
+        reward = 0
         for key, value in areas.items():
             sm, mx, curr_area_accuracy = calculate_area_accuracy(value)
             if the_worst_accuracy is None or the_worst_accuracy > curr_area_accuracy:
                 the_worst_accuracy = curr_area_accuracy
-            count_area_misses -= 0 if curr_area_accuracy >= self.area_accuracy else sm - mx
-        return areas, count_area_misses, the_worst_accuracy
+            reward += sm if curr_area_accuracy >= self.area_accuracy else 0
+        return areas, reward, the_worst_accuracy
 
     def apply_action(self, action):
         self.actions_done += 1
@@ -390,7 +390,7 @@ class StateManipulator:
         logging.debug('best areas:' + str(self.best_areas))
         em = 'best reward[{}],worst accuracy[{}],best reward ever[{}],restart[{}],data[{}],steps[{}],restart[{}]:'. \
             format(self.best_reward, self.best_reward_worst_accuracy, self.best_reward_ever, self.best_restart_ever,
-                   self.data_provider.get_data_size(), self.actions_done, self.restarts)
+                   self.get_data_size(), self.actions_done, self.restarts)
         logging.debug(em)
         print(em)
         eem = '************************************************************************************************'
@@ -408,11 +408,14 @@ class StateManipulator:
     def get_state(self):
         return self.state
 
-    def get_best_reward(self):
+    def get_best_reward_ever(self):
         return self.best_reward_ever
 
+    def is_done(self):
+        return self.best_reward_ever == self.get_data_size()
+
     def get_data_size(self):
-        return self.data_provider.get_data_size()
+        return self.data_provider.get_actual_data_size()
 
     def get_actions_done(self):
         return self.actions_done
