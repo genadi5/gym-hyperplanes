@@ -4,18 +4,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
 
 
 def run_classifiers(X_train, X_test, y_train, y_test, cls=''):
-    names = ["Nearest Neighbors", "Linear SVM", "RBF SVM",
-             "Decision Tree", "Random Forest", "Neural Net"]
+    names = ["Nearest Neighbors", "RBF SVM", "Random Forest", "Neural Net"]
 
     classifiers = [
         KNeighborsClassifier(3),
-        SVC(kernel="linear", C=0.025),
         SVC(gamma=2, C=1),
-        DecisionTreeClassifier(max_depth=10),
         RandomForestClassifier(max_depth=10, n_estimators=30, max_features=1),
         MLPClassifier(alpha=1, max_iter=1000)]
 
