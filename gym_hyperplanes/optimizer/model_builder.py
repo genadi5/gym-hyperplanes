@@ -1,4 +1,5 @@
 import math
+import operator
 import os
 import sys
 
@@ -6,6 +7,7 @@ import gym_hyperplanes.optimizer.params as pm
 import numpy as np
 from gekko import GEKKO
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
+from gym_hyperplanes.states.state_calc import make_area
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
@@ -54,7 +56,25 @@ def calculate_destination(from_point, to_point, delta):
     return [(1 + delta) * t - delta * f for f, t in zip(from_point, to_point)]
 
 
-def find_closest_point(point, required_class, hp_states, penetration_delta):
+def calculate_strech_destination(touch_point, dataset_provider, hp_state, powers, class_area):
+    signs = np.dot(dataset_provider.get_only_data(), hp_state.get_hp_state()) - hp_state.get_hp_dist()
+    areas = np.apply_along_axis(make_area, 1, signs, powers)
+    area_data, area_features_minimums, area_features_maximums = dataset_provider.get_area_data(areas == area)
+
+    min_distance = 0
+    the_closest_point = None
+    for i in area_data.shape[0]:
+        current_point = list(area_data[i, :])
+        subtractions = map(operator.sub, touch_point, current_point)
+        distance = math.sqrt(sum(map(lambda x: x * x, subtractions)))
+        if (the_closest_point is None) or (min_distance > distance):
+            the_closest_point = current_point
+            min_distance = distance
+
+    return calculate_destination(touch_point, the_closest_point)
+
+
+def find_closest_point(point, required_class, hp_states, penetration_delta, dataset_provider=None):
     classifier = DeepHyperplanesClassifier(hp_states)
     y = classifier.predict(np.array([point]), required_class)
     if y[0] is not None:  # we found area for point
@@ -72,7 +92,7 @@ def find_closest_point(point, required_class, hp_states, penetration_delta):
             features_minimums = hp_state.get_features_minimums()
             features_maximums = hp_state.get_features_maximums()
             for i, constraints_set in enumerate(constraints_sets):
-                features_bounds = hp_state.get_area_features_bounds(constraints_set.get_area())
+                features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
                 try:
                     m = GEKKO(remote=False)  # Initialize gekko
                     if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
@@ -85,10 +105,17 @@ def find_closest_point(point, required_class, hp_states, penetration_delta):
                     sys.stdout = sys.__stdout__
 
                     touch_point = [var.value[0] for var in vars]
-                    touch_point = [round(v, int(pm.PRECISION)) for v in touch_point]
 
-                    closest_point = calculate_destination(point, touch_point, penetration_delta)
-                    closest_point = [round(v, int(pm.PRECISION)) for v in closest_point]
+                    if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
+                        closest_point = touch_point
+                    elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_FEATURES:
+                        closest_point = calculate_destination(point, touch_point, penetration_delta)
+                    elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_STRETCH:
+                        closest_point = calculate_strech_destination(touch_point, dataset_provider, hp_state, powers,
+                                                                     constraints_set.get_class_area())
+                    else:
+                        print('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                        closest_point = touch_point
 
                     closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
                     closest_area = np.bitwise_or.reduce(powers[closest_array > 0])

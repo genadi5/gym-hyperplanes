@@ -6,11 +6,11 @@ REQUIRED_CLASS = None
 INSTANCES = None
 TRAIN_SET = None
 PENETRATION_DELTA = None
-PRECISION = 0
+SOURCE_MODEL_FILE = None
 
 FEATURE_BOUND_AREA = 'AREA'
 FEATURE_BOUND_FEATURES = 'FEATURES'
-FEATURE_BOUND_EXTEND = 'EXTEND'
+FEATURE_BOUND_STRETCH = 'STRETCH'
 FEATURE_BOUND = FEATURE_BOUND_AREA
 
 
@@ -30,8 +30,8 @@ def load_params():
     global INSTANCES
     global TRAIN_SET
     global PENETRATION_DELTA
-    global PRECISION
     global FEATURE_BOUND
+    global SOURCE_MODEL_FILE
 
     parser = ArgumentParser()
     parser.add_argument("-f", "--file", dest="file", help="Data file path")
@@ -40,16 +40,16 @@ def load_params():
     parser.add_argument("-i", "--instances", dest="instances", help="Instances file")
     parser.add_argument("-t", "--train_set", dest="train_set", help="Train set")
     parser.add_argument("-p", "--penetration_delta", dest="penetration_delta", help="Penetration Delta")
-    parser.add_argument("-s", "--precision", dest="precision", default=2, help="Precision")
     parser.add_argument("-b", "--feature_bound", dest="feature_bound", default='AREA', help="Features bound")
+    parser.add_argument("-m", "--source_model", dest="source_model", default=None, help="Source Model File")
     args = parser.parse_args()
     MODEL_FILE = args.file
     REQUIRED_CLASS = args.required_class
     INSTANCES = None if args.instances is None else get_instances(args.instances)
     TRAIN_SET = args.train_set
     PENETRATION_DELTA = float(args.penetration_delta) if args.penetration_delta is not None else None
-    PRECISION = float(args.precision)
     FEATURE_BOUND = args.feature_bound
+    SOURCE_MODEL_FILE = args.source_model
     if args.configuration is not None:
         config = ConfigParser()
         config.read(args.configuration)
@@ -63,15 +63,19 @@ def load_params():
             TRAIN_SET = config.get('MODEL', 'train_set')
         if config.has_option('MODEL', 'penetration_delta'):
             PENETRATION_DELTA = float(config.get('MODEL', 'penetration_delta'))
-        if config.has_option('MODEL', 'precision'):
-            PRECISION = float(config.get('MODEL', 'precision'))
         if config.has_option('MODEL', 'feature_bound'):
             FEATURE_BOUND = config.get('MODEL', 'feature_bound')
+        if config.has_option('MODEL', 'source_model_file'):
+            SOURCE_MODEL_FILE = config.get('MODEL', 'source_model_file')
+
+    if (SOURCE_MODEL_FILE is None) and (FEATURE_BOUND == FEATURE_BOUND_STRETCH):
+        print('No source model file provided while set {} bound, switching to {} bound'.
+              format(FEATURE_BOUND_STRETCH, FEATURE_BOUND_AREA))
 
     print('MODEL_FILE {}'.format(MODEL_FILE))
     print('REQUIRED_CLASS {}'.format(REQUIRED_CLASS))
     print('INSTANCES {}'.format(INSTANCES))
     print('TRAIN_SET {}'.format(TRAIN_SET))
     print('PENETRATION_DELTA {}'.format(PENETRATION_DELTA))
-    print('PRECISION {}'.format(PRECISION))
     print('FEATURE_BOUND {}'.format(FEATURE_BOUND))
+    print('SOURCE_MODEL_FILE {}'.format(SOURCE_MODEL_FILE))

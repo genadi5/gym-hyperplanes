@@ -1,7 +1,5 @@
 import pickle
 
-import gym_hyperplanes.optimizer.params as pm
-
 
 def save_hyperplanes_state(hyperplane_states, file_path):
     with open(file_path, 'wb') as handle:
@@ -112,9 +110,9 @@ class HyperplaneConstraint:
         self.coefficients = coefficients
         self.d = d
         self.sign = sign
-        coefficients_list = [str(round(coefficient, int(pm.PRECISION))) + ' * x_' + str(i) for i, coefficient in
+        coefficients_list = [str(round(coefficient, 1)) + ' * x_' + str(i) for i, coefficient in
                              enumerate(self.coefficients)]
-        self.repr = ' + '.join(coefficients_list) + ' ' + self.sign + ' ' + str(round(self.d, int(pm.PRECISION)))
+        self.repr = ' + '.join(coefficients_list) + ' ' + self.sign + ' ' + str(round(self.d, 1))
 
     def get_coefficients(self):
         return self.coefficients
@@ -137,5 +135,5 @@ class HyperplaneConstraintSet:
     def get_constraints(self):
         return self.constraints
 
-    def get_area(self):
+    def get_class_area(self):
         return self.class_area

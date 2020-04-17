@@ -6,8 +6,8 @@ import gym_hyperplanes.optimizer.params as pm
 import gym_hyperplanes.states.hyperplanes_state as hs
 import numpy as np
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
-
-np.set_printoptions(precision=pm.PRECISION)
+from gym_hyperplanes.states.dataset_provider import DataSetProvider
+from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 
 
 def execute():
@@ -15,13 +15,18 @@ def execute():
     required_class = hp_states[0].get_class_adapter()(pm.REQUIRED_CLASS)
     instances = pm.INSTANCES
     penetration_delta = pm.PENETRATION_DELTA
+
+    dataset = None
+    if pm.SOURCE_MODEL_FILE is not None:
+        dataset = DataSetProvider('optimizer', pm.SOURCE_MODEL_FILE, HyperplaneConfig())
+
     results = []
 
     start = time.time()
     for i, instance in enumerate(instances):
         print('>>>>> #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
         start_instance = time.time()
-        result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta)
+        result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta, dataset)
         print('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in constraint {}'.
               format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result,
                      constraints))
