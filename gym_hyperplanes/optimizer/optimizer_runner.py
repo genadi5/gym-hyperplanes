@@ -1,10 +1,13 @@
-import numpy as np
 import time
+
 import gym_hyperplanes.classifiers.classic_classification as ccc
 import gym_hyperplanes.optimizer.model_builder as mb
 import gym_hyperplanes.optimizer.params as pm
 import gym_hyperplanes.states.hyperplanes_state as hs
+import numpy as np
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
+
+np.set_printoptions(precision=pm.PRECISION)
 
 
 def execute():
@@ -16,11 +19,12 @@ def execute():
 
     start = time.time()
     for i, instance in enumerate(instances):
-        print('>>>>> Starting #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
+        print('>>>>> #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
         start_instance = time.time()
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta)
         print('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in constraint {}'.
-              format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result, constraints))
+              format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result,
+                     constraints))
         results.append(result[0])
     if pm.TRAIN_SET is not None:
         print('Starting testing prediction')

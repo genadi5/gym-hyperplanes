@@ -1,5 +1,6 @@
-import operator
 import pickle
+
+import gym_hyperplanes.optimizer.params as pm
 
 
 def save_hyperplanes_state(hyperplane_states, file_path):
@@ -37,7 +38,8 @@ class HyperplanesBoundary:
 
 
 class HyperplanesState:
-    def __init__(self, hp_state, hp_dist, areas_to_classes, reward, features_minimums, features_maximums):
+    def __init__(self, hp_state, hp_dist, areas_to_classes, reward, areas_features_bounds,
+                 features_minimums, features_maximums):
         self.hp_state = hp_state
         self.hp_dist = hp_dist
         self.areas_to_classes = areas_to_classes
@@ -53,6 +55,7 @@ class HyperplanesState:
             class_areas.add(area)
             self.classes_to_areas[cls] = class_areas
         self.reward = reward
+        self.areas_features_bounds = areas_features_bounds
         self.features_minimums = features_minimums
         self.features_maximums = features_maximums
 
@@ -94,6 +97,9 @@ class HyperplanesState:
             constraint_sets.append(HyperplaneConstraintSet(cs, class_area))
         return constraint_sets
 
+    def get_area_features_bounds(self, class_area):
+        return self.areas_features_bounds[class_area]
+
     def get_features_minimums(self):
         return self.features_minimums
 
@@ -106,6 +112,9 @@ class HyperplaneConstraint:
         self.coefficients = coefficients
         self.d = d
         self.sign = sign
+        coefficients_list = [str(round(coefficient, int(pm.PRECISION))) + ' * x_' + str(i) for i, coefficient in
+                             enumerate(self.coefficients)]
+        self.repr = ' + '.join(coefficients_list) + ' ' + self.sign + ' ' + str(round(self.d, int(pm.PRECISION)))
 
     def get_coefficients(self):
         return self.coefficients
@@ -115,6 +124,9 @@ class HyperplaneConstraint:
 
     def get_sign(self):
         return self.sign
+
+    def __repr__(self):
+        return self.repr
 
 
 class HyperplaneConstraintSet:

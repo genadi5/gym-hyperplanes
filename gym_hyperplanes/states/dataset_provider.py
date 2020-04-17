@@ -104,7 +104,11 @@ class DataSetProvider(DataProvider):
         for instance in instances:
             instance_indexes = self.groups.get(tuple(instance))
             indexes += list(instance_indexes.values)
-        return pd.DataFrame(np.array(self.data.iloc[indexes, :]))
+        area_data = pd.DataFrame(np.array(self.data.iloc[indexes, :]))
+        area_features_minimums = np.amin(instances, axis=0)
+        area_features_maximums = np.amax(instances, axis=0)
+
+        return area_data, area_features_minimums, area_features_maximums
 
     def get_labels(self):
         return self.data_labels

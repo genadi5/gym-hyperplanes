@@ -2,10 +2,10 @@ import math
 import os
 import sys
 
+import gym_hyperplanes.optimizer.params as pm
 import numpy as np
 from gekko import GEKKO
-
-from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier, HyperplanesClassifier
+from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
@@ -71,17 +71,24 @@ def find_closest_point(point, required_class, hp_states, penetration_delta):
         if len(constraints_sets) > 0:
             features_minimums = hp_state.get_features_minimums()
             features_maximums = hp_state.get_features_maximums()
-
             for i, constraints_set in enumerate(constraints_sets):
+                features_bounds = hp_state.get_area_features_bounds(constraints_set.get_area())
                 try:
                     m = GEKKO(remote=False)  # Initialize gekko
-                    vars = generate_vars_objective(m, features_minimums, features_maximums, point)
+                    if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
+                        vars = generate_vars_objective(m, features_bounds[0], features_bounds[1], point)
+                    else:
+                        vars = generate_vars_objective(m, features_minimums, features_maximums, point)
                     generate_constraints(m, vars, constraints_set.get_constraints())
                     sys.stdout = open(os.devnull, "w")
                     m.solve(disp=False)  # Solve
                     sys.stdout = sys.__stdout__
+
                     touch_point = [var.value[0] for var in vars]
+                    touch_point = [round(v, int(pm.PRECISION)) for v in touch_point]
+
                     closest_point = calculate_destination(point, touch_point, penetration_delta)
+                    closest_point = [round(v, int(pm.PRECISION)) for v in closest_point]
 
                     closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
                     closest_area = np.bitwise_or.reduce(powers[closest_array > 0])

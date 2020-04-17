@@ -112,3 +112,21 @@ def load_params(config_file_path=None):
             PI_FRACTION = int(config.get('HYPERPLANES', 'rotation_fraction'))
         if config.has_option('HYPERPLANES', 'distance_delta_from_origin'):
             FROM_ORIGIN_DELTA_PERCENTS = int(config.get('HYPERPLANES', 'distance_delta_from_origin'))
+
+    print('DATA_FILE {}'.format(DATA_FILE))
+    print('CONFIG_FILE {}'.format(CONFIG_FILE))
+    print('DATA_NAME {}'.format(DATA_NAME))
+    print('HYPERPLANES_FILE {}'.format(HYPERPLANES_FILE))
+    print('ENTRY_LEVELS {}'.format(ENTRY_LEVELS))
+    print('ENTRY_LEVEL_HYPERPLANES {}'.format(ENTRY_LEVEL_HYPERPLANES))
+    print('ENTRY_LEVEL_STEPS {}'.format(ENTRY_LEVEL_STEPS))
+    print('STEPS {}'.format(STEPS))
+    print('STEPS_NO_REWARD_IMPROVEMENTS_PART {}'.format(STEPS_NO_REWARD_IMPROVEMENTS_PART))
+    print('STEPS_NO_REWARD_IMPROVEMENTS {}'.format(STEPS_NO_REWARD_IMPROVEMENTS))
+    print('ITERATIONS {}'.format(ITERATIONS))
+
+    print('HYPERPLANES {}'.format(HYPERPLANES))
+    print('ACCURACY {}'.format(ACCURACY))
+    print('PI_FRACTION {}'.format(PI_FRACTION))
+    print('FROM_ORIGIN_DELTA_PERCENTS {}'.format(FROM_ORIGIN_DELTA_PERCENTS))
+    print('ROTATION_TRANSLATION_MAX_RATIO {}'.format(ROTATION_TRANSLATION_MAX_RATIO))

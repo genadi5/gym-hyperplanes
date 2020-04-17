@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
@@ -9,7 +9,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 def run_classifiers(X_train, X_test, y_train, y_test, cls=''):
     names = ["Nearest Neighbors", "Linear SVM", "RBF SVM",
-             "Decision Tree", "Random Forest", "Neural Net", "AdaBoost"]
+             "Decision Tree", "Random Forest", "Neural Net"]
 
     classifiers = [
         KNeighborsClassifier(3),
@@ -17,14 +17,13 @@ def run_classifiers(X_train, X_test, y_train, y_test, cls=''):
         SVC(gamma=2, C=1),
         DecisionTreeClassifier(max_depth=10),
         RandomForestClassifier(max_depth=10, n_estimators=30, max_features=1),
-        MLPClassifier(alpha=1, max_iter=1000),
-        AdaBoostClassifier()]
+        MLPClassifier(alpha=1, max_iter=1000)]
 
     for name, clf in zip(names, classifiers):
         print('Starting evaluation of {} for class {}'.format(name, cls))
         clf.fit(X_train, y_train)
         # predict = clf.predict(X_test)
-        # print('For class {} predicted {}'.format(y_train[0], predict))
+        # print('For class {} predicted {}'.format(cls, predict))
         score = clf.score(X_test, y_test)
 
         print('For class {} -  Name: [{}], Score: [{}]'.format(cls, name, score))
@@ -66,9 +65,13 @@ def main():
     # test_data_file = '/UP/Teza/classoptimizer/pendigits/pendigits.tes'
     # load_train_and_test(train_data_file, test_data_file)
     # load_split_and_test('/UP/Teza/classoptimizer/iris/iris.data')
-    # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt'
+
+    # 0.6 - 0.7
+    data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt'
+    # 1.0
     # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/iris/iris.data'
-    data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/pendigits/pendigits.tra'
+    # 0.97-0.99
+    # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/pendigits/pendigits.tra'
     load_split_and_test(data_file)
 
 

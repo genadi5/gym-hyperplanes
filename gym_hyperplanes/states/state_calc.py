@@ -146,13 +146,15 @@ class StateManipulator:
                         'Start state')
         copy_best_areas = dict(self.best_areas_ever)
         missed_areas = {}
+        areas_features_bounds = {}
         signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state_ever) - self.best_hp_dist_ever
         areas = np.apply_along_axis(make_area, 1, signs, self.powers)
         for area, value in self.best_areas_ever.items():
             _, _, accuracy = calculate_area_accuracy(value)
+            area_data, area_features_minimums, area_features_maximums = self.data_provider.get_area_data(areas == area)
+            areas_features_bounds[area] = [area_features_minimums, area_features_maximums]
             if not complete:
                 if accuracy < self.area_accuracy:
-                    area_data = self.data_provider.get_area_data(areas == area)
                     missed_areas[area] = area_data
                     copy_best_areas.pop(area, None)
                     if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -170,8 +172,10 @@ class StateManipulator:
                None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state_ever,
                                                                        self.best_hp_dist_ever, copy_best_areas,
                                                                        self.best_reward_ever,
+                                                                       areas_features_bounds,
                                                                        self.data_provider.get_features_minimums(),
-                                                                       self.data_provider.get_features_maximums())
+                                                                       self.data_provider.get_features_maximums()
+                                                                       )
 
     def calculate_reward(self):
         areas, reward, best_reward_worst_accuracy = self._calculate_ratio()
