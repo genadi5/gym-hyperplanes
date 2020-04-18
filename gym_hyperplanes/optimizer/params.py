@@ -1,3 +1,4 @@
+import logging
 from argparse import ArgumentParser
 from configparser import ConfigParser
 
@@ -52,6 +53,7 @@ def load_params():
     FEATURE_BOUND = args.feature_bound
     SOURCE_MODEL_FILE = args.source_model
     if args.configuration is not None:
+        logging.info('^^^^^ Loading from config {}'.format(args.configuration))
         config = ConfigParser()
         config.read(args.configuration)
         if config.has_option('MODEL', 'model_file'):
@@ -68,15 +70,17 @@ def load_params():
             FEATURE_BOUND = config.get('MODEL', 'feature_bound')
         if config.has_option('MODEL', 'source_model_file'):
             SOURCE_MODEL_FILE = config.get('MODEL', 'source_model_file')
+    else:
+        logging.info('^^^^^ No configuration file provided, using command line and default arguments')
 
     if (SOURCE_MODEL_FILE is None) and (FEATURE_BOUND == FEATURE_BOUND_STRETCH):
-        print('No source model file provided while set {} bound, switching to {} bound'.
-              format(FEATURE_BOUND_STRETCH, FEATURE_BOUND_AREA))
+        logging.info('No source model file provided while set {} bound, switching to {} bound'.
+                     format(FEATURE_BOUND_STRETCH, FEATURE_BOUND_AREA))
 
-    print('MODEL_FILE {}'.format(MODEL_FILE))
-    print('REQUIRED_CLASS {}'.format(REQUIRED_CLASS))
-    print('INSTANCES {}'.format(INSTANCES))
-    print('TRAIN_SET {}'.format(TRAIN_SET))
-    print('PENETRATION_DELTA {}'.format(PENETRATION_DELTA))
-    print('FEATURE_BOUND {}'.format(FEATURE_BOUND))
-    print('SOURCE_MODEL_FILE {}'.format(SOURCE_MODEL_FILE))
+    logging.info('MODEL_FILE {}'.format(MODEL_FILE))
+    logging.info('REQUIRED_CLASS {}'.format(REQUIRED_CLASS))
+    logging.info('INSTANCES {}'.format(INSTANCES))
+    logging.info('TRAIN_SET {}'.format(TRAIN_SET))
+    logging.info('PENETRATION_DELTA {}'.format(PENETRATION_DELTA))
+    logging.info('FEATURE_BOUND {}'.format(FEATURE_BOUND))
+    logging.info('SOURCE_MODEL_FILE {}'.format(SOURCE_MODEL_FILE))

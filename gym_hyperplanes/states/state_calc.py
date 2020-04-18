@@ -220,6 +220,7 @@ class StateManipulator:
         for key, value in areas.items():
             sm, mx, curr_area_accuracy = calculate_area_accuracy(value)
             reward += sm if curr_area_accuracy >= self.area_accuracy else 0
+            # reward -= 0 if curr_area_accuracy >= self.area_accuracy else sm - mx
         return areas, reward
 
     def apply_action(self, action):
@@ -409,6 +410,7 @@ class StateManipulator:
 
     def is_done(self):
         return self.best_reward_ever == self.get_data_size()
+        # return self.best_reward_ever == 0
 
     def get_data_size(self):
         return self.data_provider.get_actual_data_size()

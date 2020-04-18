@@ -1,3 +1,4 @@
+import logging
 import time
 
 import gym_hyperplanes.classifiers.classic_classification as ccc
@@ -23,17 +24,21 @@ def execute():
 
     start = time.time()
     for i, instance in enumerate(instances):
-        print('>>>>> #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
+        print('>>>>> #{}/#{} at time {} instance {}'.format((i + 1), len(instances), (time.time() - start), instance))
         start_instance = time.time()
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, dataset)
         if constraints is None:
-            print('<<<<< Done in {}, overall {} for instance #{}/#{}:{} is already of class {}'.
-                  format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,
-                         required_class))
+            logging.info('<<<<< Done in {}, overall {} for instance #{}/#{}:{} is already of class {}'.
+                         format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,
+                                required_class))
         else:
-            print('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in area {}'.
-                  format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result,
-                         constraints.get_class_area()))
+            logging.info('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in area {}'.
+                         format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,
+                                result,
+                                constraints.get_class_area()))
+        if result is None:
+            logging.info('<<<<<<!!!!! No closest point found for instance {} !!!!!!!!!!!!!'.format(instance))
+            continue
         results.append(result[0])
     if pm.TRAIN_SET is not None:
         print('Starting testing prediction')

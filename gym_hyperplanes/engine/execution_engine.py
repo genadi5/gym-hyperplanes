@@ -119,9 +119,9 @@ def execute():
                       format(round(time.time() - start), len(new_executions), new_execution_data_to_process,
                              len(executions) - removed_from_execution + added_new_executions, data_to_process))
                 added_new_executions += len(new_executions)  # current round add after print above
-                print('@@@@@@@@@@@@ At time {} secs done {}, running {} with total size {}'.
-                      format(round(time.time() - start), done_executions,
-                             len(executions) - removed_from_execution + added_new_executions, data_to_process))
+            print('@@@@@@@@@@@@ At time {} secs done {}, running {} with total size {}'.
+                  format(round(time.time() - start), done_executions,
+                         len(executions) - removed_from_execution + added_new_executions, data_to_process))
             done_executions += 1
 
         executions = submitted_executions

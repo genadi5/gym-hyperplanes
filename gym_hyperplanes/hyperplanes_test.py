@@ -1,13 +1,12 @@
 import gym
 import numpy as np
+# from rl.agents.dqn import DQNAgent
+from gym_hyperplanes.dqn import DQNAgent
 from keras.layers import Dense, Activation, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
 from rl.memory import SequentialMemory
 from rl.policy import BoltzmannQPolicy
-
-# from rl.agents.dqn import DQNAgent
-from gym_hyperplanes.dqn import DQNAgent
 
 env = gym.make('gym_hyperplanes:hyperplanes-v0')
 # env = gym.make('CartPole-v0')

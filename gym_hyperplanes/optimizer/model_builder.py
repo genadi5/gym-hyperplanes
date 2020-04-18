@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import math
 import operator
 import os
@@ -76,6 +77,7 @@ def stretched(touch_point, dataset_provider, hp_state, powers, class_area):
 
 
 def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
+    pm.load_params()
     try:
         m = GEKKO(remote=False)  # Initialize gekko
         if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
@@ -98,17 +100,26 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
         elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_STRETCH:
             closest_point = stretched(touch_point, dataset_provider, hp_state, powers, constraints_set.get_class_area())
         else:
-            print('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            logging.info('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             closest_point = touch_point
 
-        closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
-        closest_area = np.bitwise_or.reduce(powers[closest_array > 0])
-        if closest_area != constraints_set.class_area:
-            return None, None
-        return (closest_point, m.options.objfcnval), constraints_set
+        # due to roundings we can be on the opposite side to area - did not reach it although we very close
+        # in this case we try to fix this problem
+        for i in range(0, 3):
+            closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
+            closest_area = np.bitwise_or.reduce(powers[closest_array > 0])
+            if closest_area == constraints_set.class_area:
+                logging.info('@@@@@ Closest point {} at  area {} got at attempt {}'.format(closest_point,
+                                                                                           constraints_set.class_area,
+                                                                                           (i + 1)))
+                return (closest_point, m.options.objfcnval), constraints_set
+            logging.info('@@@@@ Result point {} is on the opposite side of {}, going to fix it at attempt {}'.
+                         format(closest_point, constraints_set.class_area, (i + 1)))
+            closest_point = calculate_destination(point, closest_point, pm.PENETRATION_DELTA)
+        return None, None
     except:
         sys.stdout = sys.__stdout__
-        print('Optimizer failed {}'.format(sys.exc_info()))
+        logging.info('Optimizer failed {}'.format(sys.exc_info()))
         return None, None
 
 
@@ -136,8 +147,6 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
             for constraints_set in constraints_sets:
                 closest_points.append(
                     pool_executor.submit(closest_to_area, point, powers, hp_state, constraints_set, dataset_provider))
-                if len(closest_points) % 10 == 0:
-                    print('Submitted for search {} areas'.format(len(closest_points)))
     print('Submitted overall for search {} areas'.format(len(closest_points)))
 
     processed_areas = 0
@@ -161,5 +170,5 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
             the_closest_point = result
             min_distance = distance
             the_closest_constraints_set = constraints_set
-    print(the_closest_point)
+    logging.info(the_closest_point)
     return the_closest_point, the_closest_constraints_set

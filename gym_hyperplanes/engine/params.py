@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 from argparse import ArgumentParser
@@ -17,7 +18,7 @@ ENTRY_LEVELS = 1
 ENTRY_LEVEL_HYPERPLANES = 20
 ENTRY_LEVEL_STEPS = 1000
 STEPS = 4000
-MAX_EPISODE_STEPS = 3000
+MAX_EPISODE_STEPS = 4000
 STEPS_NO_REWARD_IMPROVEMENTS_PART = 4
 STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
 ROTATION_TRANSLATION_MAX_RATIO = 10
@@ -36,6 +37,7 @@ def load_params(config_file_path=None):
     global STEPS_NO_REWARD_IMPROVEMENTS_PART
     global STEPS_NO_REWARD_IMPROVEMENTS
     global ITERATIONS
+    global MAX_EPISODE_STEPS
 
     global HYPERPLANES
     global ACCURACY
@@ -49,7 +51,8 @@ def load_params(config_file_path=None):
                         replace(' ', '_').replace(':', '_').replace('-', '_'), help="Test name")
     parser.add_argument("-f", "--file", dest="file", default=None, help="Data file path")
     parser.add_argument("-c", "--configuration", dest="configuration", default=None, help="Configuration file")
-    parser.add_argument("-s", "--episode_steps", dest="episode_steps", default=10000, help="Number of steps in episode")
+    parser.add_argument("-s", "--steps", dest="steps", default=4000, help="Number of Steps")
+    parser.add_argument("-e", "--episode_steps", dest="episode_steps", default=4000, help="Number of steps in episode")
     parser.add_argument("-i", "--no_improvement_in_reward_part", default=4, dest="no_improvement_in_reward",
                         help="Number of steps wo improvement in reward as part of all steps")
     parser.add_argument("-d", "--deep_iterations", dest="deep_iterations", default=5,
@@ -67,9 +70,11 @@ def load_params(config_file_path=None):
     DATA_FILE = args.file
     DATA_NAME = args.name
 
-    STEPS = int(args.episode_steps)
+    STEPS = int(args.steps)
     STEPS_NO_REWARD_IMPROVEMENTS_PART = int(args.no_improvement_in_reward)
     STEPS_NO_REWARD_IMPROVEMENTS = math.ceil(STEPS / STEPS_NO_REWARD_IMPROVEMENTS_PART)
+    MAX_EPISODE_STEPS = int(args.episode_steps)
+
     ITERATIONS = int(args.deep_iterations)
     HYPERPLANES = int(args.hyperplanes)
     ACCURACY = int(args.accuracy)
@@ -103,6 +108,8 @@ def load_params(config_file_path=None):
             ITERATIONS = int(config.get('EXECUTION', 'deep_iterations'))
         if config.has_option('EXECUTION', 'rotation_translation_max_ratio'):
             ROTATION_TRANSLATION_MAX_RATIO = int(config.get('EXECUTION', 'rotation_translation_max_ratio'))
+        if config.has_option('EXECUTION', 'episode_steps'):
+            MAX_EPISODE_STEPS = int(config.get('EXECUTION', 'episode_steps'))
 
         if config.has_option('HYPERPLANES', 'hyperplanes'):
             HYPERPLANES = int(config.get('HYPERPLANES', 'hyperplanes'))
@@ -113,20 +120,21 @@ def load_params(config_file_path=None):
         if config.has_option('HYPERPLANES', 'distance_delta_from_origin'):
             FROM_ORIGIN_DELTA_PERCENTS = int(config.get('HYPERPLANES', 'distance_delta_from_origin'))
 
-    print('DATA_FILE {}'.format(DATA_FILE))
-    print('CONFIG_FILE {}'.format(CONFIG_FILE))
-    print('DATA_NAME {}'.format(DATA_NAME))
-    print('HYPERPLANES_FILE {}'.format(HYPERPLANES_FILE))
-    print('ENTRY_LEVELS {}'.format(ENTRY_LEVELS))
-    print('ENTRY_LEVEL_HYPERPLANES {}'.format(ENTRY_LEVEL_HYPERPLANES))
-    print('ENTRY_LEVEL_STEPS {}'.format(ENTRY_LEVEL_STEPS))
-    print('STEPS {}'.format(STEPS))
-    print('STEPS_NO_REWARD_IMPROVEMENTS_PART {}'.format(STEPS_NO_REWARD_IMPROVEMENTS_PART))
-    print('STEPS_NO_REWARD_IMPROVEMENTS {}'.format(STEPS_NO_REWARD_IMPROVEMENTS))
-    print('ITERATIONS {}'.format(ITERATIONS))
+    logging.info('DATA_FILE {}'.format(DATA_FILE))
+    logging.info('CONFIG_FILE {}'.format(CONFIG_FILE))
+    logging.info('DATA_NAME {}'.format(DATA_NAME))
+    logging.info('HYPERPLANES_FILE {}'.format(HYPERPLANES_FILE))
+    logging.info('ENTRY_LEVELS {}'.format(ENTRY_LEVELS))
+    logging.info('ENTRY_LEVEL_HYPERPLANES {}'.format(ENTRY_LEVEL_HYPERPLANES))
+    logging.info('ENTRY_LEVEL_STEPS {}'.format(ENTRY_LEVEL_STEPS))
+    logging.info('STEPS {}'.format(STEPS))
+    logging.info('STEPS_NO_REWARD_IMPROVEMENTS_PART {}'.format(STEPS_NO_REWARD_IMPROVEMENTS_PART))
+    logging.info('STEPS_NO_REWARD_IMPROVEMENTS {}'.format(STEPS_NO_REWARD_IMPROVEMENTS))
+    logging.info('ITERATIONS {}'.format(ITERATIONS))
+    logging.info('MAX_EPISODE_STEPS {}'.format(MAX_EPISODE_STEPS))
 
-    print('HYPERPLANES {}'.format(HYPERPLANES))
-    print('ACCURACY {}'.format(ACCURACY))
-    print('PI_FRACTION {}'.format(PI_FRACTION))
-    print('FROM_ORIGIN_DELTA_PERCENTS {}'.format(FROM_ORIGIN_DELTA_PERCENTS))
-    print('ROTATION_TRANSLATION_MAX_RATIO {}'.format(ROTATION_TRANSLATION_MAX_RATIO))
+    logging.info('HYPERPLANES {}'.format(HYPERPLANES))
+    logging.info('ACCURACY {}'.format(ACCURACY))
+    logging.info('PI_FRACTION {}'.format(PI_FRACTION))
+    logging.info('FROM_ORIGIN_DELTA_PERCENTS {}'.format(FROM_ORIGIN_DELTA_PERCENTS))
+    logging.info('ROTATION_TRANSLATION_MAX_RATIO {}'.format(ROTATION_TRANSLATION_MAX_RATIO))

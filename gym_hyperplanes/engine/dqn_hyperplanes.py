@@ -1,5 +1,8 @@
 import gym
 import numpy as np
+from gym_hyperplanes.states.dataset_provider import DataSetProvider
+from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
+from gym_hyperplanes.states.state_calc import StateManipulator
 from keras.callbacks.callbacks import Callback
 from keras.layers import Dense, Activation, Flatten
 from keras.models import Sequential
@@ -7,10 +10,6 @@ from keras.optimizers import Adam
 from rl.agents.dqn import DQNAgent
 from rl.memory import SequentialMemory
 from rl.policy import BoltzmannQPolicy
-
-from gym_hyperplanes.states.dataset_provider import DataSetProvider
-from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
-from gym_hyperplanes.states.state_calc import StateManipulator
 
 MAX_STEPS = 50000
 
