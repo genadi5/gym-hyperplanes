@@ -126,14 +126,27 @@ class HyperplaneConstraint:
     def __repr__(self):
         return self.repr
 
+    def __str__(self):
+        return self.repr
+
 
 class HyperplaneConstraintSet:
     def __init__(self, constraints, class_area):
         self.constraints = constraints
         self.class_area = class_area
+        self.repr = '[{}->'.format(self.class_area)
+        delimiter = ''
+        for constraint in self.constraints:
+            self.repr += delimiter + str(constraint)
+            delimiter = ','
+
+        self.repr += ']'
 
     def get_constraints(self):
         return self.constraints
 
     def get_class_area(self):
         return self.class_area
+
+    def __repr__(self):
+        return self.repr

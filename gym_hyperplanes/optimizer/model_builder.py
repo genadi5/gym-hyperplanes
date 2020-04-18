@@ -57,7 +57,7 @@ def calculate_destination(from_point, to_point, delta):
     return [(1 + delta) * t - delta * f for f, t in zip(from_point, to_point)]
 
 
-def calculate_strech_destination(touch_point, dataset_provider, hp_state, powers, class_area):
+def stretched(touch_point, dataset_provider, hp_state, powers, class_area):
     signs = np.dot(dataset_provider.get_only_data(), hp_state.get_hp_state()) - hp_state.get_hp_dist()
     areas = np.apply_along_axis(make_area, 1, signs, powers)
     area_data, area_features_minimums, area_features_maximums = dataset_provider.get_area_data(areas == class_area)
@@ -96,8 +96,7 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
         elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_FEATURES:
             closest_point = calculate_destination(point, touch_point, pm.PENETRATION_DELTA)
         elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_STRETCH:
-            closest_point = calculate_strech_destination(touch_point, dataset_provider, hp_state, powers,
-                                                         constraints_set.get_class_area())
+            closest_point = stretched(touch_point, dataset_provider, hp_state, powers, constraints_set.get_class_area())
         else:
             print('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             closest_point = touch_point
@@ -106,7 +105,6 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
         closest_area = np.bitwise_or.reduce(powers[closest_array > 0])
         if closest_area != constraints_set.class_area:
             return None, None
-
         return (closest_point, m.options.objfcnval), constraints_set
     except:
         sys.stdout = sys.__stdout__
@@ -130,15 +128,29 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
     constraints_set_list = []
     results = []
 
+    closest_points = []
     for h, hp_state in enumerate(hp_states):
         powers = np.array([pow(2, i) for i in range(len(hp_state.hp_dist))])
         constraints_sets = hp_state.get_class_constraint(required_class)
         if len(constraints_sets) > 0:
             for constraints_set in constraints_sets:
-                result, constraints_set = closest_to_area(point, powers, hp_state, constraints_set, dataset_provider)
-                if result is not None:
-                    results.append(result)
-                    constraints_set_list.append(constraints_set)
+                closest_points.append(
+                    pool_executor.submit(closest_to_area, point, powers, hp_state, constraints_set, dataset_provider))
+                if len(closest_points) % 10 == 0:
+                    print('Submitted for search {} areas'.format(len(closest_points)))
+    print('Submitted overall for search {} areas'.format(len(closest_points)))
+
+    processed_areas = 0
+    for closest_point in concurrent.futures.as_completed(closest_points):
+        result = closest_point.result()[0]
+        constraints_set = closest_point.result()[1]
+        if result is not None:
+            results.append(result)
+            constraints_set_list.append(constraints_set)
+        processed_areas += 1
+        if processed_areas % 10 == 0:
+            print('Processed {} out of {} areas'.format(processed_areas, len(closest_points)))
+
     min_distance = 0
     the_closest_point = None
     the_closest_constraints_set = None
