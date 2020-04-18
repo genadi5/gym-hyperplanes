@@ -59,19 +59,19 @@ def calculate_destination(from_point, to_point, delta):
 def calculate_strech_destination(touch_point, dataset_provider, hp_state, powers, class_area):
     signs = np.dot(dataset_provider.get_only_data(), hp_state.get_hp_state()) - hp_state.get_hp_dist()
     areas = np.apply_along_axis(make_area, 1, signs, powers)
-    area_data, area_features_minimums, area_features_maximums = dataset_provider.get_area_data(areas == area)
+    area_data, area_features_minimums, area_features_maximums = dataset_provider.get_area_data(areas == class_area)
 
     min_distance = 0
     the_closest_point = None
-    for i in area_data.shape[0]:
-        current_point = list(area_data[i, :])
+    for i in range(area_data.shape[0]):
+        current_point = list(area_data.iloc[i, 0: -1])
         subtractions = map(operator.sub, touch_point, current_point)
         distance = math.sqrt(sum(map(lambda x: x * x, subtractions)))
         if (the_closest_point is None) or (min_distance > distance):
             the_closest_point = current_point
             min_distance = distance
 
-    return calculate_destination(touch_point, the_closest_point)
+    return calculate_destination(touch_point, the_closest_point, -0.5)
 
 
 def find_closest_point(point, required_class, hp_states, penetration_delta, dataset_provider=None):
