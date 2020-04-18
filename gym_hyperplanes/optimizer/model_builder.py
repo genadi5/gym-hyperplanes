@@ -1,3 +1,4 @@
+import concurrent.futures
 import math
 import operator
 import os
@@ -71,10 +72,55 @@ def calculate_strech_destination(touch_point, dataset_provider, hp_state, powers
             the_closest_point = current_point
             min_distance = distance
 
-    return calculate_destination(touch_point, the_closest_point, -0.5)
+    return calculate_destination(touch_point, the_closest_point, -pm.FEATURE_BOUND_STRETCH_RATIO)
 
 
-def find_closest_point(point, required_class, hp_states, penetration_delta, dataset_provider=None):
+def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
+    try:
+        m = GEKKO(remote=False)  # Initialize gekko
+        if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
+            features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
+            vars = generate_vars_objective(m, features_bounds[0], features_bounds[1], point)
+        else:
+            vars = generate_vars_objective(m, hp_state.get_features_minimums(),
+                                           hp_state.get_features_maximums(), point)
+        generate_constraints(m, vars, constraints_set.get_constraints())
+        sys.stdout = open(os.devnull, "w")
+        m.solve(disp=False)  # Solve
+        sys.stdout = sys.__stdout__
+
+        touch_point = [var.value[0] for var in vars]
+
+        if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
+            closest_point = touch_point
+        elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_FEATURES:
+            closest_point = calculate_destination(point, touch_point, pm.PENETRATION_DELTA)
+        elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_STRETCH:
+            closest_point = calculate_strech_destination(touch_point, dataset_provider, hp_state, powers,
+                                                         constraints_set.get_class_area())
+        else:
+            print('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            closest_point = touch_point
+
+        closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
+        closest_area = np.bitwise_or.reduce(powers[closest_array > 0])
+        if closest_area != constraints_set.class_area:
+            return None, None
+
+        return (closest_point, m.options.objfcnval), constraints_set
+    except:
+        sys.stdout = sys.__stdout__
+        print('Optimizer failed {}'.format(sys.exc_info()))
+        return None, None
+
+
+WORKERS = os.cpu_count()
+WORKERS = math.ceil(WORKERS * 0.8)
+
+pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
+
+
+def find_closest_point(point, required_class, hp_states, dataset_provider=None):
     classifier = DeepHyperplanesClassifier(hp_states)
     y = classifier.predict(np.array([point]), required_class)
     if y[0] is not None:  # we found area for point
@@ -86,64 +132,22 @@ def find_closest_point(point, required_class, hp_states, penetration_delta, data
 
     for h, hp_state in enumerate(hp_states):
         powers = np.array([pow(2, i) for i in range(len(hp_state.hp_dist))])
-
         constraints_sets = hp_state.get_class_constraint(required_class)
         if len(constraints_sets) > 0:
-            features_minimums = hp_state.get_features_minimums()
-            features_maximums = hp_state.get_features_maximums()
-            for i, constraints_set in enumerate(constraints_sets):
-                features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
-                try:
-                    m = GEKKO(remote=False)  # Initialize gekko
-                    if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
-                        vars = generate_vars_objective(m, features_bounds[0], features_bounds[1], point)
-                    else:
-                        vars = generate_vars_objective(m, features_minimums, features_maximums, point)
-                    generate_constraints(m, vars, constraints_set.get_constraints())
-                    sys.stdout = open(os.devnull, "w")
-                    m.solve(disp=False)  # Solve
-                    sys.stdout = sys.__stdout__
-
-                    touch_point = [var.value[0] for var in vars]
-
-                    if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
-                        closest_point = touch_point
-                    elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_FEATURES:
-                        closest_point = calculate_destination(point, touch_point, penetration_delta)
-                    elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_STRETCH:
-                        closest_point = calculate_strech_destination(touch_point, dataset_provider, hp_state, powers,
-                                                                     constraints_set.get_class_area())
-                    else:
-                        print('Oj wej zmir!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                        closest_point = touch_point
-
-                    closest_array = np.dot(np.array(closest_point), hp_state.hp_state) - hp_state.hp_dist
-                    closest_area = np.bitwise_or.reduce(powers[closest_array > 0])
-                    if closest_area != constraints_set.class_area:
-                        continue
-
-                    results.append((closest_point, m.options.objfcnval))
+            for constraints_set in constraints_sets:
+                result, constraints_set = closest_to_area(point, powers, hp_state, constraints_set, dataset_provider)
+                if result is not None:
+                    results.append(result)
                     constraints_set_list.append(constraints_set)
-                except:
-                    sys.stdout = sys.__stdout__
     min_distance = 0
     the_closest_point = None
     the_closest_constraints_set = None
     for result, constraints_set in zip(results, constraints_set_list):
-        if the_closest_point is None:
+        subtractions = map(operator.sub, point, result[0])
+        distance = math.sqrt(sum(map(lambda x: x * x, subtractions)))
+        if (the_closest_point is None) or (min_distance > distance):
             the_closest_point = result
-            min_distance = math.sqrt(sum(map(lambda x: x * x, result[0])))
+            min_distance = distance
             the_closest_constraints_set = constraints_set
-        else:
-            distance = 0
-            # their squares
-            for s, d in zip(point, result[0]):
-                distance += pow(d - s, 2)
-            distance = math.sqrt(distance)
-
-            if distance < min_distance:
-                min_distance = distance
-                the_closest_point = result
-                the_closest_constraints_set = constraints_set
     print(the_closest_point)
     return the_closest_point, the_closest_constraints_set

@@ -14,7 +14,6 @@ def execute():
     hp_states = hs.load_hyperplanes_state(pm.MODEL_FILE)
     required_class = hp_states[0].get_class_adapter()(pm.REQUIRED_CLASS)
     instances = pm.INSTANCES
-    penetration_delta = pm.PENETRATION_DELTA
 
     dataset = None
     if pm.SOURCE_MODEL_FILE is not None:
@@ -26,7 +25,7 @@ def execute():
     for i, instance in enumerate(instances):
         print('>>>>> #{}/#{} at time {} instance {}'.format(i, len(instances), (time.time() - start), instance))
         start_instance = time.time()
-        result, constraints = mb.find_closest_point(instance, required_class, hp_states, penetration_delta, dataset)
+        result, constraints = mb.find_closest_point(instance, required_class, hp_states, dataset)
         print('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in constraint {}'.
               format((time.time() - start_instance), (time.time() - start), i, len(instances), instance, result,
                      constraints))

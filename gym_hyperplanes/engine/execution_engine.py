@@ -33,12 +33,8 @@ def create_execution(iter, config, data=None, boundaries=None):
 
 WORKERS = os.cpu_count()
 WORKERS = math.ceil(WORKERS * 0.8)
-# WORKERS = WORKERS * 2
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
-
-
-# pool_executor = concurrent.futures.ProcessPoolExecutor(6)
 
 
 def execute_search(execution, config_file):
