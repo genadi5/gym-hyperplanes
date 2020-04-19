@@ -41,7 +41,7 @@ def execute_search(execution, config_file):
     logging.basicConfig(filename='model_run.log', format='%(asctime)s %(levelname)s:%(message)s', level=logging.DEBUG)
     pm.load_params(config_file)
 
-    msg = '$$$$$$$$$$$$$ Starting {} iteration with {} hyperplanes on data size {} $$$$$$$$$$$$$'. \
+    msg = '$$$$$$$$$$$$$ Starting iteration {} with {} hyperplanes on data size {} $$$$$$$$$$$$$'. \
         format(execution.get_deep_level(), execution.get_config().get_hyperplanes(),
                execution.data_provider.get_actual_data_size())
     print(msg)
@@ -77,21 +77,62 @@ def execute_search(execution, config_file):
                 data_size_to_process += new_execution.get_data_size()
         else:
             print('Reached max allowed iterations. Finished')
-    return hp_state, new_executions, data_size_to_process, execution.get_data_size()
+    return hp_state, new_executions, data_size_to_process, execution.get_data_size(), \
+           state_manipulator.get_best_reward_ever()
+
+
+def accept_execution(added_new_executions, data_to_process, done_executions, execution, executions, hp_states,
+                     removed_from_execution, start, submitted_executions):
+    removed_from_execution += 1
+    new_hp_state = execution.result()[0]
+    new_executions = execution.result()[1]
+    new_execution_data_to_process = execution.result()[2]
+    data_to_process += new_execution_data_to_process
+    data_to_process -= execution.result()[3]
+    if new_hp_state is not None:
+        hp_states.append(new_hp_state)
+    if len(new_executions) > 0:
+        submitted_executions += [pool_executor.submit(execute_search, new_execution, pm.CONFIG_FILE)
+                                 for new_execution in new_executions]
+
+        print('@@@@@@@@@@@@ At time {} secs adding {} with data size {} to remaining {} to total size {}'.
+              format(round(time.time() - start), len(new_executions), new_execution_data_to_process,
+                     len(executions) - removed_from_execution + added_new_executions, data_to_process))
+        added_new_executions += len(new_executions)  # current round add after print above
+    print('@@@@@@@@@@@@ At time {} secs done {}, running {} with total size {}'.
+          format(round(time.time() - start), done_executions,
+                 len(executions) - removed_from_execution + added_new_executions, data_to_process))
+    done_executions += 1
+    return data_to_process, done_executions, added_new_executions, removed_from_execution
 
 
 def execute():
-    start_iteration = 1
-    starting_execution = create_execution(start_iteration, create_config(start_iteration))
+    start_overall = time.time()
+    starting_executions = [create_execution(1, create_config(1)) for _ in range(0, WORKERS)]
+    data_to_process = starting_executions[0].get_data_size()
+    execution_name = starting_executions[0].get_data_provider().get_name()
 
-    execution_name = starting_execution.get_data_provider().get_name()
-    hp_states = []
-
-    data_to_process = starting_execution.get_data_size()
-    done_executions = 0
-    start = time.time()
     # execute_search(starting_execution, pm.CONFIG_FILE)
-    executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)]
+    executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)
+                  for starting_execution in starting_executions]
+    best_start_execution = None
+    best_start_reward = None
+    for execution in concurrent.futures.as_completed(executions):
+        execution_reward = execution.result()[4]
+        print('########### Got starting execution with reward {}'.format(execution_reward))
+        if best_start_reward is None or execution_reward > best_start_reward:
+            best_start_execution = execution
+            best_start_reward = execution_reward
+
+    print('########### Finally starting execution with reward {} in {} secs'.
+          format(best_start_reward, round(time.time() - start_overall)))
+
+    hp_states = []
+    executions = []
+    data_to_process, done_executions, added_new_executions, removed_from_execution = \
+        accept_execution(0, data_to_process, 1, best_start_execution, executions,
+                         hp_states, 0, start_overall, executions)
+    start = time.time()
     while len(executions) > 0:
         print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.
               format(round(time.time() - start), done_executions, len(executions), data_to_process))
@@ -101,32 +142,14 @@ def execute():
         removed_from_execution = 0
         added_new_executions = 0
         for execution in concurrent.futures.as_completed(executions):
-            removed_from_execution += 1
-            new_hp_state = execution.result()[0]
-            new_executions = execution.result()[1]
-            new_execution_data_to_process = execution.result()[2]
-
-            data_to_process += new_execution_data_to_process
-            data_to_process -= execution.result()[3]
-
-            if new_hp_state is not None:
-                hp_states.append(new_hp_state)
-            if len(new_executions) > 0:
-                submitted_executions += [pool_executor.submit(execute_search, new_execution, pm.CONFIG_FILE)
-                                         for new_execution in new_executions]
-
-                print('@@@@@@@@@@@@ At time {} secs adding {} with data size {} to remaining {} to total size {}'.
-                      format(round(time.time() - start), len(new_executions), new_execution_data_to_process,
-                             len(executions) - removed_from_execution + added_new_executions, data_to_process))
-                added_new_executions += len(new_executions)  # current round add after print above
-            print('@@@@@@@@@@@@ At time {} secs done {}, running {} with total size {}'.
-                  format(round(time.time() - start), done_executions,
-                         len(executions) - removed_from_execution + added_new_executions, data_to_process))
-            done_executions += 1
+            data_to_process, done_executions, added_new_executions, removed_from_execution = \
+                accept_execution(added_new_executions, data_to_process, done_executions, execution, executions,
+                                 hp_states, removed_from_execution, start, submitted_executions)
 
         executions = submitted_executions
 
-    print('@@@@@@@@@@@@@ Finished {} execution in [{}]'.format(done_executions, round(time.time() - start)))
+    print('@@@@@@@@@@@@@ Finished {} layered executions in [{}]'.format(done_executions, round(time.time() - start)))
+    print('@@@@@@@@@@@@@ Finished {} execution in [{}]'.format(done_executions, round(time.time() - start_overall)))
     if pm.HYPERPLANES_FILE is not None:
         output_file = pm.HYPERPLANES_FILE
     else:

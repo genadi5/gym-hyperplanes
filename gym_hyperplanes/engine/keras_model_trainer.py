@@ -30,11 +30,11 @@ def execute_hyperplane_search(state_manipulator, config):
 
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + env.get_state().shape))
-    model.add(Dense(128))
+    model.add(Dense(64))
     model.add(Activation('relu'))
-    model.add(Dense(128))
+    model.add(Dense(64))
     model.add(Activation('relu'))
-    model.add(Dense(128))
+    model.add(Dense(64))
     model.add(Activation('relu'))
     model.add(Dense(env.get_actions_number()))
     model.add(Activation('softmax'))  # linear

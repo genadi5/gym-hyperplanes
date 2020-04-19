@@ -157,7 +157,7 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
             results.append(result)
             constraints_set_list.append(constraints_set)
         processed_areas += 1
-        if processed_areas % 10 == 0:
+        if processed_areas % 50 == 0:
             print('Processed {} out of {} areas'.format(processed_areas, len(closest_points)))
 
     min_distance = 0

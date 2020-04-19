@@ -32,7 +32,7 @@ def execute():
                          format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,
                                 required_class))
         else:
-            logging.info('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point {} in area {}'.
+            logging.info('<<<<< Done in {}, overall {} for instance #{}/#{} {} closest point to {} in area {}'.
                          format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,
                                 result,
                                 constraints.get_class_area()))
