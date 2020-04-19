@@ -64,6 +64,8 @@ def main():
 
     # 0.6 - 0.7
     data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/Games/Games.txt'
+    # 0.6 - 0.7
+    # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/demo/data.txt'
     # 1.0
     # data_file = '/UP/Teza/classoptimizer/gym-hyperplanes/gym_hyperplanes/data/iris/iris.data'
     # 0.97-0.99
