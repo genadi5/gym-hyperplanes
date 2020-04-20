@@ -78,7 +78,7 @@ def execute_search(execution, config_file):
         else:
             print('Reached max allowed iterations. Finished')
     return hp_state, new_executions, data_size_to_process, execution.get_data_size(), \
-           state_manipulator.get_best_reward_ever()
+           state_manipulator.get_best_reward_ever(), done
 
 
 def accept_execution(added_new_executions, data_to_process, done_executions, execution, executions, hp_states,
@@ -112,17 +112,23 @@ def execute():
     data_to_process = starting_executions[0].get_data_size()
     execution_name = starting_executions[0].get_data_provider().get_name()
 
-    # execute_search(starting_execution, pm.CONFIG_FILE)
+    # execute_search(starting_executions[0], pm.CONFIG_FILE)
     executions = [pool_executor.submit(execute_search, starting_execution, pm.CONFIG_FILE)
                   for starting_execution in starting_executions]
     best_start_execution = None
     best_start_reward = None
+    done = False
     for execution in concurrent.futures.as_completed(executions):
         execution_reward = execution.result()[4]
+        done = execution.result()[5]
         print('########### Got starting execution with reward {}'.format(execution_reward))
         if best_start_reward is None or execution_reward > best_start_reward:
             best_start_execution = execution
             best_start_reward = execution_reward
+
+        if done:
+            print('Execution done with reward {}'.format(best_start_reward))
+            break
 
     print('########### Finally starting execution with reward {} in {} secs'.
           format(best_start_reward, round(time.time() - start_overall)))
@@ -132,24 +138,28 @@ def execute():
     data_to_process, done_executions, added_new_executions, removed_from_execution = \
         accept_execution(0, data_to_process, 1, best_start_execution, executions,
                          hp_states, 0, start_overall, executions)
-    start = time.time()
-    while len(executions) > 0:
-        print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.
-              format(round(time.time() - start), done_executions, len(executions), data_to_process))
+    if not done:
+        start = time.time()
+        while len(executions) > 0:
+            print('@@@@@@@@@@@@@ At time [{}] secs done [{}], running [{}] with data size [{}]'.
+                  format(round(time.time() - start), done_executions, len(executions), data_to_process))
 
-        submitted_executions = []
+            submitted_executions = []
 
-        removed_from_execution = 0
-        added_new_executions = 0
-        for execution in concurrent.futures.as_completed(executions):
-            data_to_process, done_executions, added_new_executions, removed_from_execution = \
-                accept_execution(added_new_executions, data_to_process, done_executions, execution, executions,
-                                 hp_states, removed_from_execution, start, submitted_executions)
+            removed_from_execution = 0
+            added_new_executions = 0
+            for execution in concurrent.futures.as_completed(executions):
+                data_to_process, done_executions, added_new_executions, removed_from_execution = \
+                    accept_execution(added_new_executions, data_to_process, done_executions, execution, executions,
+                                     hp_states, removed_from_execution, start, submitted_executions)
 
-        executions = submitted_executions
+            executions = submitted_executions
 
-    print('@@@@@@@@@@@@@ Finished {} layered executions in [{}]'.format(done_executions, round(time.time() - start)))
-    print('@@@@@@@@@@@@@ Finished {} execution in [{}]'.format(done_executions, round(time.time() - start_overall)))
+        print(
+            '@@@@@@@@@@@@@ Finished {} layered executions in [{}]'.format(done_executions, round(time.time() - start)))
+        print('@@@@@@@@@@@@@ Finished {} execution in [{}]'.format(done_executions, round(time.time() - start_overall)))
+    else:
+        print('!!!!Nothing to execute since first execution is done!!!!')
     if pm.HYPERPLANES_FILE is not None:
         output_file = pm.HYPERPLANES_FILE
     else:

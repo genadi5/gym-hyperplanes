@@ -5,9 +5,10 @@ import operator
 import os
 import sys
 
-import gym_hyperplanes.optimizer.params as pm
 import numpy as np
 from gekko import GEKKO
+
+import gym_hyperplanes.optimizer.params as pm
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
 from gym_hyperplanes.states.state_calc import make_area
 

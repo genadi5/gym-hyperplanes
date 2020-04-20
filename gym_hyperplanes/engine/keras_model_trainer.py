@@ -1,7 +1,6 @@
 import time
 
 import gym
-import gym_hyperplanes.engine.params as pm
 import numpy as np
 from keras.callbacks.callbacks import Callback
 from keras.layers import Dense, Activation, Flatten
@@ -10,6 +9,8 @@ from keras.optimizers import Adam
 from rl.agents.dqn import DQNAgent
 from rl.memory import SequentialMemory
 from rl.policy import BoltzmannQPolicy
+
+import gym_hyperplanes.engine.params as pm
 
 np.random.seed(round(time.time()) % 1000000)
 

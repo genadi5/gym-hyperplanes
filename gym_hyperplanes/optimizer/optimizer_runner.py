@@ -1,11 +1,12 @@
 import logging
 import time
 
+import numpy as np
+
 import gym_hyperplanes.classifiers.classic_classification as ccc
 import gym_hyperplanes.optimizer.model_builder as mb
 import gym_hyperplanes.optimizer.params as pm
 import gym_hyperplanes.states.hyperplanes_state as hs
-import numpy as np
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
 from gym_hyperplanes.states.dataset_provider import DataSetProvider
 from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig

@@ -2,6 +2,7 @@ import time
 
 import gym
 import numpy as np
+
 from gym_hyperplanes.engine.dqn import DQN
 
 np.random.seed(round(time.time()) % 1000000)

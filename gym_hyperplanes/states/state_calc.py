@@ -2,9 +2,10 @@ import logging
 import math
 import time
 
-import gym_hyperplanes.engine.params as pm
 import numpy as np
 import numpy_indexed as npi
+
+import gym_hyperplanes.engine.params as pm
 # import time
 from gym_hyperplanes.states.hyperplanes_state import HyperplanesState
 from gym_hyperplanes.states.missed_areas import MissedAreas
@@ -141,6 +142,24 @@ class StateManipulator:
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             print_state(self.best_hp_state_ever, self.best_hp_dist_ever, self.best_areas_ever, self.best_reward_ever,
                         'Start state')
+
+        areas_features_bounds, copy_best_areas, missed_areas = self.extract_areas(complete)
+
+        if not self.is_done() and len(copy_best_areas) == 0:
+            if self.try_split_to_better_state():
+                areas_features_bounds, copy_best_areas, missed_areas = self.extract_areas(complete)
+
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            logging.debug('+++ Finished state')
+        return MissedAreas(missed_areas, self.best_hp_state_ever, self.best_hp_dist_ever), \
+               None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state_ever,
+                                                                       self.best_hp_dist_ever, copy_best_areas,
+                                                                       self.best_reward_ever,
+                                                                       areas_features_bounds,
+                                                                       self.data_provider.get_features_minimums(),
+                                                                       self.data_provider.get_features_maximums())
+
+    def extract_areas(self, complete):
         copy_best_areas = dict(self.best_areas_ever)
         missed_areas = {}
         areas_features_bounds = {}
@@ -162,30 +181,46 @@ class StateManipulator:
             elif logging.getLogger().isEnabledFor(logging.DEBUG):
                 area_data = self.data_provider.get_area_data(areas == area)
                 print_area(area, area_data, 'preserving with {}'.format(accuracy))
+        return areas_features_bounds, copy_best_areas, missed_areas
 
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            logging.debug('+++ Finished state')
-        return MissedAreas(missed_areas, self.best_hp_state_ever, self.best_hp_dist_ever), \
-               None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state_ever,
-                                                                       self.best_hp_dist_ever, copy_best_areas,
-                                                                       self.best_reward_ever,
-                                                                       areas_features_bounds,
-                                                                       self.data_provider.get_features_minimums(),
-                                                                       self.data_provider.get_features_maximums()
-                                                                       )
+    def try_split_to_better_state(self):
+        print('&&&&& Trying to split better')
+        best_reward = self.get_best_reward_ever()
+        data = self.data_provider.get_only_data()
+        for i in range(0, self.hyperplanes):
+            print('&&&&& Trying to split over hyperplane {} of {}'.format((i + 1), self.hyperplanes))
+            hp_state = np.copy(self.best_hp_state_ever)
+            hp_dist = np.copy(self.best_hp_dist_ever)
+            for p in range(0, data.shape[0] - 1):
+                mid_p = np.array([(p1 + p2) / 2 for p1, p2, in zip(data[p, :], data[p + 1, :])])
+                hp_dist[i] = np.dot(mid_p, hp_state[:, i])
+                reward = self._calculate_reward(hp_state, hp_dist, True)
+                if reward > best_reward:
+                    print('!!!!!! Found better reward {} --> {}'.format(best_reward, reward))
+                    return True
+        return False
 
     def calculate_reward(self):
-        areas, reward = self._calculate_ratio()
+        return self._calculate_reward(self.hp_state, self.hp_dist)
+
+    def _calculate_reward(self, hp_state, hp_dist, copy_new_state=False):
+        areas, reward = self.calculate_state_reward(hp_state, hp_dist)
         if self.actions_done % 1000 == 0:
             self.thousand_took = round(time.time() - self.thousand_time)
             self.thousand_time = time.time()
         if self.best_reward is None or self.best_reward < reward:
+            if copy_new_state:
+                self.hp_state = np.copy(hp_state)
+                self.hp_dist = np.copy(hp_dist)
+                self.state = self.copy_state(hp_state, hp_dist)
             self.best_reward = reward
-            self.best_hp_state = np.copy(self.hp_state)
-            self.best_hp_dist = np.copy(self.hp_dist)
+            self.best_hp_state = np.copy(hp_state)
+            self.best_hp_dist = np.copy(hp_dist)
+
             self.best_state = np.copy(self.state)
             self.best_areas = areas
-            self.print_state('Best reward [{}]'.format(self.best_reward))
+            if not copy_new_state:
+                self.print_state('Best reward [{}]'.format(self.best_reward))
 
             if self.best_reward_ever is None or self.best_reward_ever < self.best_reward:
                 best_reward_ever_before = self.best_reward_ever
@@ -196,26 +231,27 @@ class StateManipulator:
                 self.best_hp_dist_ever = self.best_hp_dist
                 self.best_state_ever = self.best_state
                 self.best_areas_ever = self.best_areas
-                self.print_state('!!! Best reward ever [{}] from [{}] in episode {}'.
-                                 format(self.best_reward_ever, best_reward_ever_before, self.restarts))
+                if not copy_new_state:
+                    self.print_state('!!! Best reward ever [{}] from [{}] in episode {}'.
+                                     format(self.best_reward_ever, best_reward_ever_before, self.restarts))
         elif self.actions_done % 1000 == 0:
-            self.print_state('steps [1000/{}] in [{}] secs, current reward [{}], total time [{}] in [{}] restarts'.
-                             format(self.actions_done, self.thousand_took, reward,
-                                    round(time.time() - self.start_time), self.restarts))
+            if not copy_new_state:
+                self.print_state('steps [1000/{}] in [{}] secs, current reward [{}], total time [{}] in [{}] restarts'.
+                                 format(self.actions_done, self.thousand_took, reward,
+                                        round(time.time() - self.start_time), self.restarts))
 
         return reward
 
-    def _calculate_ratio(self):
+    def calculate_state_reward(self, hp_state, hp_dist):
         areas = dict()
         # calculate value of instances per hyperplane
-        signs = np.dot(self.data_provider.get_only_data(), self.hp_state) - self.hp_dist
+        signs = np.dot(self.data_provider.get_only_data(), hp_state) - hp_dist
         sides = (signs > 0)
 
         indices_list = npi.group_by(sides).split(np.arange(len(sides)))
         for indices in indices_list:
             calculate_areas(indices, sides, self.powers, areas, self.data_provider)
 
-        # self.total_areas += (round(time.time()) - start_areas)
         reward = 0
         for key, value in areas.items():
             sm, mx, curr_area_accuracy = calculate_area_accuracy(value)
@@ -238,7 +274,7 @@ class StateManipulator:
             feature_ind = self.get_feature_index(action_index)
             self.apply_rotation(hyperplane, feature_ind, action_direction)
             self.rotations_done += 1
-        self.copy_state()
+        self.state = self.copy_state(self.hp_state, self.hp_dist)
 
     def apply_translation(self, hp_ind, action_direction):
         if action_direction == UP and self.hp_dist[hp_ind] < self.hp_max_distance_from_origin:
@@ -318,32 +354,13 @@ class StateManipulator:
             res = res - pow(self.hp_state[feature_ind, hp_ind], 2) + pow(replace_value, 2)
         return res
 
-    def copy_state(self):
+    def copy_state(self, hp_state, hp_dist):
+        state = np.zeros(self.hyperplanes * (self.features + 1))
         for i in range(self.hyperplanes):
             start_hp_features = i * (self.features + 1)
-            self.state[start_hp_features:start_hp_features + self.features] = self.hp_state[:, i]
-            self.state[start_hp_features + self.features] = self.hp_dist[i]
-
-    def add_hyperplane(self):
-        if MAX_HYPERPLANES <= self.hyperplanes:
-            return False
-        self.hyperplanes += 1
-        self.actions_number = (self.features + 1) * self.hyperplanes * 2
-
-        self.hp_state = self.best_hp_state
-        self.hp_dist = self.best_hp_dist
-
-        self.hp_state = np.hstack((self.hp_state, np.zeros((self.features, 1))))
-        self.hp_state[:, -1] = math.sqrt(1 / self.features)
-
-        self.hp_dist = np.hstack((self.hp_dist, [np.median(self.hp_dist)]))
-        self.state = np.hstack((self.state, [0] * (self.features + 1)))
-        self.copy_state()
-
-        self.best_hp_state = np.copy(self.hp_state)
-        self.best_hp_dist = np.copy(self.hp_dist)
-        self.best_state = np.copy(self.state)
-        return True
+            state[start_hp_features:start_hp_features + self.features] = hp_state[:, i]
+            state[start_hp_features + self.features] = hp_dist[i]
+        return state
 
     def reset_stats(self):
         self.restarts += 1
@@ -363,7 +380,6 @@ class StateManipulator:
         self.best_areas = None
         self.best_reward = None
 
-        self.state = np.zeros(self.hyperplanes * (self.features + 1))
         self.hp_state = np.zeros([self.features, self.hyperplanes])
         self.hp_dist = np.zeros([self.hyperplanes])
 
@@ -375,7 +391,7 @@ class StateManipulator:
         for i in range(0, self.hyperplanes):
             for j in range((i + 1) * times_each_hyperplane_to_translate):
                 self.apply_translation(i, UP)
-        self.copy_state()
+        self.state = self.copy_state(self.hp_state, self.hp_dist)
 
         return self.state
 

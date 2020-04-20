@@ -47,9 +47,6 @@ class HyperPlanesEnv(gym.Env):
     def close(self):
         pass
 
-    def add_hyperplane(self):
-        return self.state_manipulator.add_hyperplane()
-
     def sample(self):
         return self.state_manipulator.sample()
 
