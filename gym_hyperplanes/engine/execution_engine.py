@@ -4,7 +4,6 @@ import math
 import os
 import time
 
-# import gym_hyperplanes.engine.model_trainer as trainer
 import gym_hyperplanes.engine.keras_model_trainer as keras_trainer
 import gym_hyperplanes.engine.params as pm
 import gym_hyperplanes.states.hyperplanes_state as hs
@@ -48,7 +47,6 @@ def execute_search(execution, config_file):
     logging.info(msg)
 
     state_manipulator = StateManipulator(execution.get_data_provider(), execution.get_config())
-    # done = trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
     try:
         done = keras_trainer.execute_hyperplane_search(state_manipulator, execution.get_config())
     except Exception as e:
