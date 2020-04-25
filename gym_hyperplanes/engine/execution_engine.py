@@ -2,6 +2,7 @@ import concurrent.futures
 import logging
 import math
 import os
+import sys
 import time
 
 import gym_hyperplanes.engine.keras_model_trainer as keras_trainer
@@ -163,3 +164,4 @@ def execute():
     else:
         output_file = '{}_result.txt'.format(execution_name)
     hs.save_hyperplanes_state(hp_states, output_file)
+    sys.exit()
