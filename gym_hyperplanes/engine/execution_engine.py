@@ -9,7 +9,6 @@ import gym_hyperplanes.engine.keras_model_trainer as keras_trainer
 import gym_hyperplanes.engine.params as pm
 import gym_hyperplanes.states.hyperplanes_state as hs
 from gym_hyperplanes.engine.execution_container import ExecutionContainer
-from gym_hyperplanes.states.data_provider import TestDataProvider
 from gym_hyperplanes.states.dataset_provider import DataSetProvider
 from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 from gym_hyperplanes.states.state_calc import StateManipulator
@@ -25,10 +24,7 @@ def create_config(iteration):
 
 
 def create_execution(iter, config, data=None, boundaries=None):
-    if pm.DATA_FILE is not None:
-        return ExecutionContainer(iter, config, DataSetProvider(pm.DATA_NAME, pm.DATA_FILE, config, data), boundaries)
-    else:
-        return ExecutionContainer(iter, config, TestDataProvider(config, data), boundaries)
+    return ExecutionContainer(iter, config, DataSetProvider(pm.DATA_NAME, pm.DATA_FILE, config, data), boundaries)
 
 
 WORKERS = os.cpu_count()

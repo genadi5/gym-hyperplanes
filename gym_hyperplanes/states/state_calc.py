@@ -36,6 +36,15 @@ def print_area(area, area_data, title):
 
 
 def make_area(array, powers):
+    """
+    Given an array of numbers we transform it to an integer number where
+    for index of each non negative number in array appropriate bit set to 1
+    For example, given array [1, 0, -2, 3, 4] will produce 25 this is because we
+    get the following bits --> 11001
+    :param array: array of numbers which will represent one instance from input dataset
+    :param powers: prepared powers of 2 of appropriate length to calculate the area
+    :return: area number to which instance belongs
+    """
     return np.bitwise_or.reduce(powers[array > 0])
 
 
@@ -56,6 +65,10 @@ def calculate_areas(indices, sides, powers, areas, data_provider):
 
 
 def calculate_area_accuracy(area_classes):
+    """
+    :param area_classes: map of class name to list of instances in this area
+    :return: fraction of dominant class in this area
+    """
     sm = 0
     mx = 0
     for key, val in area_classes.items():
@@ -69,12 +82,10 @@ def calculate_area_accuracy(area_classes):
 class StateManipulator:
     def __init__(self, data_provider, hyperplane_config):
         """
-        If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take
+        If we have X features then for each hyper plane we have (X + 1) * 2 actions we can take:
         X + 1 - for X angles on each dimension/features plus 1 for to/from origin
         * 2 since it can be done in two directions (per action)
         """
-        # all features are supposed to be not negative. If they were negative we assume pre-processing were we
-        # change (move) origin in order to make all features to be positive
 
         self.data_provider = data_provider
         self.hyperplane_config = hyperplane_config
@@ -83,13 +94,14 @@ class StateManipulator:
         self.features = self.data_provider.get_features_size()
         self.hyperplanes = self.hyperplane_config.get_hyperplanes()
 
-        # how much we increase selected angle (to selected dimension)
+        # how much we rotate selected angle (of the selected dimension)
         self.pi_fraction = self.hyperplane_config.get_rotation_fraction()
-
+        # minimum percentage of dominant class to define area fully separated
         self.area_accuracy = self.hyperplane_config.get_area_accuracy()
 
-        # we encode each action as two consequence numbers for up and down direction (both angle and translation)
-        # for hyperplane x if we decide to increase angle to the dimension y we get action
+        # we encode each action as two consequence numbers for up and down direction
+        # (both angle and translation)
+        # for hyperplane x if we decide to increase angle of the dimension y we get action
         # (self.hyperplane_params_dimension * x + y) while if we decide to decrease it will be
         # (self.hyperplane_params_dimension * x + y + 1)
         # we can decide to increase/decrease angle to axis or move to/from origin
@@ -99,27 +111,36 @@ class StateManipulator:
         self.actions_number = (self.features + 1) * self.hyperplanes * 2  # for 2 directions
         # overall states depends on number of hyperplane and their dimension (number of features)
 
+        # bounds of allowed hyperplane translate movement
         self.hp_max_distance_from_origin = self.data_provider.get_max_distance_from_origin()
         self.hp_min_distance_from_origin = self.data_provider.get_min_distance_from_origin()
+        # what part of space between bound to move hyperplane each time
         self.dist_from_origin_delta_percents = self.hyperplane_config.get_from_origin_delta_percents()
 
-        # alls hyperplane positions are concatenated in one array
+        # all hyperplane positions are concatenated in one array
+        # state in space represented as one array
         self.state = np.zeros(self.hyperplanes * (self.features + 1))
+
+        # for convenience we also handle hyperplane state as 2d array:
         # each hyperplane will be encoded in dedicated column
         # number of rows is like number of features
         self.hp_state = np.zeros([self.features, self.hyperplanes])
         # the 'right' part of hyperplane equality
         self.hp_dist = np.zeros([self.hyperplanes])
 
+        # powers used to encode area to which instance belongs
         self.powers = np.array([pow(2, i) for i in range(self.hyperplanes)])
 
-        # we always store best results
+        # we always store best results per current execution (episode)
+        # best hyperplane position
         self.best_hp_state = None
         self.best_hp_dist = None
         self.best_state = None
         self.best_areas = None
         self.best_reward = None
 
+        # there can be several executions (episodes) over same space so we want to save
+        # best ever separations
         self.best_restart_ever = None
         self.best_hp_state_ever = None
         self.best_hp_dist_ever = None
@@ -127,33 +148,53 @@ class StateManipulator:
         self.best_areas_ever = None
         self.best_reward_ever = None
 
-        self.total_areas = 0
-
+        # ---------- statistics -----------
+        # how much restarts (episodes)
         self.restarts = -1
+        # overall actions
         self.actions_done = 0
+        # overall rotations
         self.rotations_done = 0
+        # overall translations
         self.translations_done = 1  # we assume we have done on translation (on init)
+        # time of current thousand actions
         self.thousand_time = time.time()
         self.thousand_took = 0
         self.start_time = time.time()
         self.reset_stats()
 
     def get_hp_state(self, complete):
+        """
+        Extracts areas which succeeded to separate and those which not succeeded
+        Those which not succeeded will be used on the next depth iteration with external
+        bound of current hyperplanes
+        :param complete: whether this is end of execution
+        :return: MissedAreas - which contains map of area to the set of instances which belong to area
+                               plus current hyperplane state for external bounds
+                HyperplanesState - areas with instances which belong to them plus current hyperplane state
+                                   these areas already have fully separated instances (up to requested accuracy)
+                                   and are ready to be used by optimizer
+        """
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             print_state(self.best_hp_state_ever, self.best_hp_dist_ever, self.best_areas_ever, self.best_reward_ever,
                         'Start state')
 
+        # Ok, let's extract areas
         areas_features_bounds, copy_best_areas, missed_areas = self.extract_areas(complete)
 
         if not self.is_done() and len(copy_best_areas) == 0:
+            # if this is the end of execution no area did full separation
+            # we may want just quickly try to improve separation by moving hyperplanes between instances
             if self.try_split_to_better_state():
+                # and if we succeeded we extract areas again
                 areas_features_bounds, copy_best_areas, missed_areas = self.extract_areas(complete)
 
         if logging.getLogger().isEnabledFor(logging.DEBUG):
             logging.debug('+++ Finished state')
         return MissedAreas(missed_areas, self.best_hp_state_ever, self.best_hp_dist_ever), \
                None if len(copy_best_areas) == 0 else HyperplanesState(self.best_hp_state_ever,
-                                                                       self.best_hp_dist_ever, copy_best_areas,
+                                                                       self.best_hp_dist_ever,
+                                                                       copy_best_areas,
                                                                        self.best_reward_ever,
                                                                        areas_features_bounds,
                                                                        self.data_provider.get_features_minimums(),
@@ -163,14 +204,20 @@ class StateManipulator:
         copy_best_areas = dict(self.best_areas_ever)
         missed_areas = {}
         areas_features_bounds = {}
+        # dot product minus hyperplane gives us position of instance against hyperplanes
         signs = np.dot(self.data_provider.get_only_data(), self.best_hp_state_ever) - self.best_hp_dist_ever
+        # encode instances by their position - to which area they belong
         areas = np.apply_along_axis(make_area, 1, signs, self.powers)
         for area, value in self.best_areas_ever.items():
             _, _, accuracy = calculate_area_accuracy(value)
+            # getting all instances which belong to area
             area_data, area_features_minimums, area_features_maximums = self.data_provider.get_area_data(areas == area)
             areas_features_bounds[area] = [area_features_minimums, area_features_maximums]
             if not complete:
+                # if this is not end of execution we will separate finished areas and missed areas
+                # which can be used in next executions
                 if accuracy < self.area_accuracy:
+                    # this area is not ready yet and we extract area for future use
                     missed_areas[area] = area_data
                     copy_best_areas.pop(area, None)
                     if logging.getLogger().isEnabledFor(logging.DEBUG):
@@ -184,6 +231,9 @@ class StateManipulator:
         return areas_features_bounds, copy_best_areas, missed_areas
 
     def try_split_to_better_state(self):
+        # we here since this is last execution and there are no areas which are separated with
+        # enough accuracy
+        # we will try to move hyperplanes between instances to improve situation - kind of last quick fix
         print('&&&&& Trying to split better')
         best_reward = self.get_best_reward_ever()
         data = self.data_provider.get_only_data()
@@ -205,6 +255,7 @@ class StateManipulator:
 
     def _calculate_reward(self, hp_state, hp_dist, copy_new_state=False):
         areas, reward = self.calculate_state_reward(hp_state, hp_dist)
+        # in case we got new better reward we want to save it for future generation
         if self.actions_done % 1000 == 0:
             self.thousand_took = round(time.time() - self.thousand_time)
             self.thousand_time = time.time()
@@ -243,15 +294,27 @@ class StateManipulator:
         return reward
 
     def calculate_state_reward(self, hp_state, hp_dist):
+        """
+        Actually calculates the current state reward - meaning counts how good separation of
+        all instances is
+        :param hp_state: equations of hyperplanes
+        :param hp_dist: the right part of hyperplane equations
+        :return: areas and the total reward
+        """
         areas = dict()
-        # calculate value of instances per hyperplane
+        # calculate value of instances per hyperplane and compare it against hyperplane
         signs = np.dot(self.data_provider.get_only_data(), hp_state) - hp_dist
         sides = (signs > 0)
 
+        # grouping instances by area to which they belong - actually we have map of area to instances per area
         indices_list = npi.group_by(sides).split(np.arange(len(sides)))
+
+        # calculating (encoding) each area and class instances which belong to it
+        # with counting number of instances per class in each area
         for indices in indices_list:
             calculate_areas(indices, sides, self.powers, areas, self.data_provider)
 
+        # calculating total reward of current state
         reward = 0
         for key, value in areas.items():
             sm, mx, curr_area_accuracy = calculate_area_accuracy(value)
@@ -260,11 +323,17 @@ class StateManipulator:
         return areas, reward
 
     def apply_action(self, action):
+        # we count how much actions executed
         self.actions_done += 1
+        # calculating which hyperplane participate in action
         hyperplane = int(action / ((self.features + 1) * 2))
+        # calculates where index of hyperplane starts in self.state
         start_hyperplane = hyperplane * (self.features + 1) * 2
 
+        # index of action in hyperplane
         action_index = int((action - start_hyperplane) / 2)
+        # each even action is rotation up or translation from origin
+        # ech odd action is rotation down or translation to origin
         action_direction = UP if action % 2 == 0 else DOWN
 
         if (action_index > 0) and (((action_index + 1) % (self.features + 1)) == 0):
@@ -283,6 +352,18 @@ class StateManipulator:
             self.hp_dist[hp_ind] -= (self.hp_max_distance_from_origin * self.dist_from_origin_delta_percents) / 100
 
     def apply_rotation(self, hp_ind, feature_ind, action_direction):
+        """
+        Is should be preserved that for any hyperplane
+        x1 * cos(a1) + x2 * cos(a2) + ... + xn * cos(an) = d
+        should preserved
+        cos(a1)^2 + cos(a2)^2 + ... + cos(an)^2 = 1
+        So, when we rotate some feature up or down we have to compensate with others to preserve equation above
+        features should be equal to 1.
+        :param hp_ind:
+        :param feature_ind:
+        :param action_direction:
+        :return:
+        """
         new_cos = math.cos(
             (math.acos(self.hp_state[feature_ind, hp_ind]) + action_direction * math.pi / self.pi_fraction) % math.pi)
 
@@ -340,8 +421,9 @@ class StateManipulator:
         if (self.rotations_done / self.translations_done) < pm.ROTATION_TRANSLATION_MAX_RATIO:
             action = np.random.randint(0, self.actions_number)
         else:
-            # print('Not enough translations {} while rotations {} ration ro be up to {}'.
-            #       format(self.translations_done, self.rotations_done, pm.ROTATION_TRANSLATION_MAX_RATIO))
+            # just in case
+            # we saw that translation can do quicker work for separation so we want to ensure some minimal
+            # amount of translations per rotations
             hyperplane = np.random.randint(0, self.hyperplanes)
             start_hyperplane = hyperplane * (self.features + 1) * 2
             start_hyperplane_translation = start_hyperplane + self.features * 2

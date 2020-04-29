@@ -20,6 +20,11 @@ def create_area_constraints(class_area, hp_state, hp_dist):
 
 
 class HyperplanesBoundary:
+    """
+    Used to provide external bound to the current search execution
+    After a search execution finished and there are areas which should be searched
+    deeper these boundaries added to the final state and used by optimizer
+    """
     def __init__(self, hp_state, hp_dist, class_area):
         self.hp_state = hp_state
         self.hp_dist = hp_dist
@@ -36,19 +41,29 @@ class HyperplanesBoundary:
 
 
 class HyperplanesState:
+    """
+    After search finished this class stores the current separation of instances space
+    If some areas where extracted for deeper search or no instances were in some areas then such
+    areas will not appear here
+    """
     def __init__(self, hp_state, hp_dist, areas_to_classes, reward, areas_features_bounds,
                  features_minimums, features_maximums):
+        # hyperplane equation
         self.hp_state = hp_state
         self.hp_dist = hp_dist
+        # map of areas to class instances which appear in this area
         self.areas_to_classes = areas_to_classes
+        # map of class to areas where class appear
         self.classes_to_areas = dict()
         for area, classes in self.areas_to_classes.items():
+            # we are scanning over ech area and find class with most instances
+            # this class will represent the area class
             cls = None
             max_len = 0
-            for c, probs in classes.items():
-                if cls is None or len(probs) > max_len:
+            for c, probabilities in classes.items():
+                if cls is None or len(probabilities) > max_len:
                     cls = c
-                    max_len = len(probs)
+                    max_len = len(probabilities)
             class_areas = set() if cls not in self.classes_to_areas else self.classes_to_areas[cls]
             class_areas.add(area)
             self.classes_to_areas[cls] = class_areas
@@ -57,6 +72,8 @@ class HyperplanesState:
         self.features_minimums = features_minimums
         self.features_maximums = features_maximums
 
+        # these are external boundaries - actually these are boundaries of the area which was not
+        # separated well and we executed next level search on it
         self.boundaries = []
 
     def set_boundaries(self, boundaries):
@@ -86,9 +103,12 @@ class HyperplanesState:
             return []
         class_areas = self.classes_to_areas[cls]
 
+        # set of constraints defines the space area to which we will search minimal distance
+        # from given instance
         constraint_sets = []
         for class_area in class_areas:
             cs = create_area_constraints(class_area, self.hp_state, self.hp_dist)
+            # we add external boundaries to each set of constraints
             for boundary in self.boundaries:
                 bcs = create_area_constraints(boundary.class_area, boundary.hp_state, boundary.hp_dist)
                 cs = cs + bcs

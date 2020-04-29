@@ -8,6 +8,13 @@ from gym_hyperplanes.states.data_provider import DataProvider
 
 
 class InstanceProbability:
+    """
+    Contains statistics on instances of the class in area where this class is dominant
+    Can be used later on to calculate probability to choose the matching area
+    For example there can be several areas of the same class where one area can be nearer to the
+    origin instance but with lower probability of the class
+    """
+
     def __init__(self, class_name, class_frequency, instances_amount):
         self.class_name = class_name
         self.class_frequency = class_frequency
@@ -42,16 +49,31 @@ class DataSetProvider(DataProvider):
             self.data = pd.DataFrame(data)
 
         provided_labels = list(self.data.iloc[:, -1])
+
+        # in case we have several identical instances - we are grouping by instances and
+        # we want to identify probability of class per instance
+        # so each group is group if indexes where instance appears
+        # this info will be provided in the output area calculations so that optimizer
+        # will be able to select best area by his own policy
         self.groups = self.data.groupby(by=[i for i in range(0, self.data.shape[1] - 1)]).groups
 
+        # collecting data rows without labels
         data_rows = []
+        # collecting labels
         data_labels = []
+        # collecting labels statistics
+        # when we calculate area - count instances of classes we provide this statistic info
+        # which can be used by optimizer to select best (according to his policy) area
         data_label_probability = []
+
+        # key is instance, value is group of indexes where instance appears
         for key, value in self.groups.items():
             data_rows.append(list(key))
 
+            # fetch classes which appear for the instance
             classes = list(np.take(provided_labels, value))
             try:
+                # find most frequent class
                 frequent_cls = statistics.mode(classes)
             except statistics.StatisticsError:
                 # in case all classes are of the same frequency statistics.mode raises exception
@@ -66,6 +88,8 @@ class DataSetProvider(DataProvider):
         min_value = float(np.amin(self.only_data))
         max_value = float(np.amax(self.only_data))
 
+        # overall maximums and minimums pre features
+        # we use this to bound search space
         self.features_minimums = np.amin(self.only_data, axis=0)
         self.features_maximums = np.amax(self.only_data, axis=0)
 
@@ -76,6 +100,7 @@ class DataSetProvider(DataProvider):
 
         # thinking that all features are homogenious we assume that their values have approximately
         # same range
+        # we use these two below in order to bound hyperplanes move from/to origin
         self.max_distance_from_origin = math.sqrt(pow(max_value, 2) * self.only_data.shape[1])
         self.min_distance_from_origin = min_value  # calculate - actually we should be able to move from - to +
 
@@ -99,6 +124,9 @@ class DataSetProvider(DataProvider):
         return self.only_data
 
     def get_area_data(self, area_array):
+        # extracting data by provided indexes
+        # generally we use this when we want to extract which belongs to specific area
+        # for future processing on next deep level
         instances = self.only_data[area_array]
         indexes = []
         for instance in instances:
