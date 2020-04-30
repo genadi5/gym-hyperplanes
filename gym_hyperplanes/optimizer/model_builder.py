@@ -14,6 +14,21 @@ from gym_hyperplanes.states.state_calc import make_area
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
+    """
+    What is our objective?
+    We search minimal distance from given point to points inside the area.
+    Distance defined as
+    sqrt(sum((x1-y1)^2 + (x2-y2)^2 + ... + (xn-yn)^2))
+    But
+    argmin(sqrt(sum((x1-y1)^2 + (x2-y2)^2 + ... + (xn-yn)^2)))
+    is equal to
+    argmin(sum((x1-y1)^2 + (x2-y2)^2 + ... + (xn-yn)^2))
+    :param m:
+    :param features_minimums:
+    :param features_maximums:
+    :param point:
+    :return:
+    """
     vars = []
     objective = None
     for i, min in enumerate(features_minimums):
@@ -43,6 +58,7 @@ def generate_constraints(m, vars, hyperplane_constraints):
         m.Equation(constraint)
         # print('Eq:[{}]'.format(constraint))
 
+    # TODO: GENADI - I think we don't need this any more - should check!!!!
     for var in vars:
         constraint = var >= 0
         m.Equation(constraint)
@@ -50,20 +66,45 @@ def generate_constraints(m, vars, hyperplane_constraints):
 
 
 def calculate_destination(from_point, to_point, delta):
-    # r - fraction of distance between from_point and to_point intermediate point
-    # in our case r = 1 + delta
-    # so equation
-    # R = (1 - r) * from_point + r * to_point
-    # will look as
-    # R = (1 + delta) * to_point - delta * from_point
+    """
+    Finding point between two given point at fraction 'delta' of the whole distance from to_point
+    from_point....distance * (1 - delta)...........middle_point.....distance * delta......to_point
+    In our case we may search point on the opposite side of to_point so we change the sign of delta
+
+    r - fraction of distance between from_point and to_point intermediate point
+    in our case r = 1 + delta
+    so equation
+    R = (1 - r) * from_point + r * to_point
+    will look as
+    R = (1 + delta) * to_point - delta * from_point
+    :param from_point:
+    :param to_point:
+    :param delta:
+    :return:
+    """
     return [(1 + delta) * t - delta * f for f, t in zip(from_point, to_point)]
 
 
 def stretched(touch_point, dataset_provider, hp_state, powers, class_area):
+    """
+    One of search modes - once area closest point to the given instance is found we suggest instead of
+    it point which lays between this point and the closest among existing instances
+    This mode can be used in case performance of original mode (the most close point of area) is not
+    seems to be not satisfactory
+    :param touch_point:
+    :param dataset_provider:
+    :param hp_state:
+    :param powers:
+    :param class_area:
+    :return:
+    """
+    # encoding instances areas
     signs = np.dot(dataset_provider.get_only_data(), hp_state.get_hp_state()) - hp_state.get_hp_dist()
     areas = np.apply_along_axis(make_area, 1, signs, powers)
+    # getting instances which belong to the area
     area_data, area_features_minimums, area_features_maximums = dataset_provider.get_area_data(areas == class_area)
 
+    # search the closest among all instances of the area
     min_distance = 0
     the_closest_point = None
     for i in range(area_data.shape[0]):
@@ -81,19 +122,24 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
     pm.load_params()
     try:
         m = GEKKO(remote=False)  # Initialize gekko
+
+        # we may want to narrow the boundaries of features to make search more close to the real world
         if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
             features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
             vars = generate_vars_objective(m, features_bounds[0], features_bounds[1], point)
         else:
             vars = generate_vars_objective(m, hp_state.get_features_minimums(),
                                            hp_state.get_features_maximums(), point)
+
         generate_constraints(m, vars, constraints_set.get_constraints())
         sys.stdout = open(os.devnull, "w")
         m.solve(disp=False)  # Solve
         sys.stdout = sys.__stdout__
 
+        # this is the point of the area which is the closest to the given one
         touch_point = [var.value[0] for var in vars]
 
+        # we may want to change it slightly according to configuration
         if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
             closest_point = touch_point
         elif pm.FEATURE_BOUND == pm.FEATURE_BOUND_FEATURES:
@@ -132,6 +178,7 @@ pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
 
 def find_closest_point(point, required_class, hp_states, dataset_provider=None):
     classifier = DeepHyperplanesClassifier(hp_states)
+    # just in case - point can already be of the requested class, let's check this
     y = classifier.predict(np.array([point]), required_class)
     if y[0] is not None:  # we found area for point
         if y[0] == required_class:  # this is our class!!!
@@ -140,6 +187,9 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
     constraints_set_list = []
     results = []
 
+    # for each hyperplane state we take all its areas
+    # and for each area which defined as to be of required class we get it's constraints
+    # and search for the closest point to the given point
     closest_points = []
     for h, hp_state in enumerate(hp_states):
         powers = np.array([pow(2, i) for i in range(len(hp_state.hp_dist))])
@@ -150,6 +200,7 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
                     pool_executor.submit(closest_to_area, point, powers, hp_state, constraints_set, dataset_provider))
     print('Submitted overall for search {} areas'.format(len(closest_points)))
 
+    # collecting results of searches executed in processes in parallel
     processed_areas = 0
     for closest_point in concurrent.futures.as_completed(closest_points):
         result = closest_point.result()[0]
@@ -161,6 +212,7 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
         if processed_areas % 50 == 0:
             print('Processed {} out of {} areas'.format(processed_areas, len(closest_points)))
 
+    # finding the closest point to the given one
     min_distance = 0
     the_closest_point = None
     the_closest_constraints_set = None

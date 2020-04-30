@@ -1,8 +1,10 @@
 class ExecutionContainer:
     def __init__(self, deep_level, config, data_provider, boundaries):
+        # level of area search
         self.deep_level = deep_level
         self.config = config
         self.data_provider = data_provider
+        # external boundaries - these we got from an area of previous level
         self.boundaries = boundaries
 
     def get_deep_level(self):

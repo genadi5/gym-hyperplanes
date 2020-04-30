@@ -29,6 +29,8 @@ class TargetReachedCallback(Callback):
 
     def on_action_end(self, action, logs={}):
         if self.manipulator.is_done():
+            # when we done - we done, we don't interesting to continue with all the rest
+            # of episodes
             raise KeyboardInterrupt
 
 
@@ -36,6 +38,7 @@ def execute_hyperplane_search(state_manipulator, config):
     env = gym.make("gym_hyperplanes:hyperplanes-v0")
     env.set_state_manipulator(state_manipulator)
 
+    # some basic neural network for out DQN
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + env.get_state().shape))
     model.add(Dense(64))
@@ -47,8 +50,12 @@ def execute_hyperplane_search(state_manipulator, config):
     model.add(Dense(env.get_actions_number()))
     model.add(Activation('softmax'))  # linear
 
-    dqn = DQNAgent(model=model, nb_actions=env.get_actions_number(), nb_steps_warmup=50, policy=BoltzmannQPolicy(),
-                   target_model_update=1e-2, memory=SequentialMemory(limit=config.get_max_steps() * 2, window_length=1))
+    dqn = DQNAgent(model=model,
+                   nb_actions=env.get_actions_number(),
+                   nb_steps_warmup=50,
+                   policy=BoltzmannQPolicy(),
+                   target_model_update=1e-2,
+                   memory=SequentialMemory(limit=config.get_max_steps() * 2, window_length=1))
     dqn.compile(Adam(lr=0.1))
 
     start_time = time.time()
