@@ -8,7 +8,7 @@ In GT domain this means: how to change NFG matrix in order to influence payer(s)
 desired (by game experimentator) action.
 
 Classification
-Given a dataset of any domain (not only GT) the system knows to build classification boundaries with hyperplanes.
+Given a dataset of any domain the system knows to build classification boundaries with hyperplanes.
 Introduced layered layered boundary definition:
     system searches in space for hyperplanes position to define boundaries with predefined accuracy 
     (when separating instances to areas we may allow some percentage of instances to be of wrong class).
