@@ -171,7 +171,7 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
 
 
 WORKERS = os.cpu_count()
-WORKERS = math.ceil(WORKERS * 0.8)
+# WORKERS = math.ceil(WORKERS * 0.8)
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
 

@@ -13,6 +13,8 @@ from gym_hyperplanes.states.dataset_provider import DataSetProvider
 from gym_hyperplanes.states.hyperplane_config import HyperplaneConfig
 from gym_hyperplanes.states.state_calc import StateManipulator
 
+ENTRY_LEVEL_CONCURRENCY = 1
+
 
 def create_config(iteration):
     steps = pm.STEPS if iteration > pm.ENTRY_LEVELS else pm.ENTRY_LEVEL_STEPS
@@ -135,10 +137,10 @@ def execute():
     First search executed in parallel by several processes and then best of result is 
     selected - this way we improve chances for better performance 
     """
-    starting_executions = [create_execution(1, create_config(1)) for _ in range(0, WORKERS)]
+    starting_executions = [create_execution(1, create_config(1)) for _ in range(0, ENTRY_LEVEL_CONCURRENCY)]
     data_to_process = starting_executions[0].get_data_size()
     execution_name = starting_executions[0].get_data_provider().get_name()
-    # execute_search(starting_executions[0], pm.CONFIG_FILE)
+    # (hp_state, _, _, _, _, done) = execute_search(starting_executions[0], pm.CONFIG_FILE)
 
     """
     Actual execution of first round

@@ -28,6 +28,7 @@ def execute():
         print('>>>>> #{}/#{} at time {} instance {}'.format((i + 1), len(instances), (time.time() - start), instance))
         start_instance = time.time()
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, dataset)
+        print('>>>>> #{}/#{} at time {} result   {}'.format((i + 1), len(instances), (time.time() - start), result))
         if constraints is None:
             logging.info('<<<<< Done in {}, overall {} for instance #{}/#{}:{} is already of class {}'.
                          format((time.time() - start_instance), (time.time() - start), i, len(instances), instance,

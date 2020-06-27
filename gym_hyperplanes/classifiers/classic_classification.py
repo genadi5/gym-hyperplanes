@@ -5,15 +5,19 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 
+from sklearn.utils import shuffle
+
 
 def run_classifiers(X_train, X_test, y_train, y_test, cls=''):
     names = ["Nearest Neighbors", "RBF SVM", "Random Forest", "Neural Net"]
 
     classifiers = [
-        KNeighborsClassifier(3),
-        SVC(gamma=2, C=1),
-        RandomForestClassifier(max_depth=10, n_estimators=30, max_features=1),
-        MLPClassifier(alpha=1, max_iter=1000)]
+        KNeighborsClassifier(weights='distance', n_jobs=-1),
+        SVC(probability=True, class_weight='balanced'),
+        RandomForestClassifier(n_estimators=100, n_jobs=-1, class_weight='balanced'),
+        MLPClassifier(solver='lbfgs', hidden_layer_sizes=(64, 64, 64,), max_iter=10000)]
+
+    X_train, y_train = shuffle(X_train, y_train)
 
     for name, clf in zip(names, classifiers):
         print('Starting evaluation of {} for class {}'.format(name, cls))
@@ -32,7 +36,7 @@ def load_split_and_test(data_file):
     X = data.iloc[:, :-1]
     y = data.iloc[:, -1]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.3, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.1, random_state=42)
 
     for cls in set(y_test):
         x_cls_test = X_test[y_test == cls]
