@@ -89,8 +89,7 @@ def stretched(touch_point, dataset_provider, hp_state, powers, class_area):
     """
     One of search modes - once area closest point to the given instance is found we suggest instead of
     it point which lays between this point and the closest among existing instances
-    This mode can be used in case performance of original mode (the most close point of area) is not
-    seems to be not satisfactory
+    This mode can be used in case performance of original mode (the most close point of area) is not satisfactory
     :param touch_point:
     :param dataset_provider:
     :param hp_state:
