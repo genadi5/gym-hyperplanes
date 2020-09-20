@@ -12,6 +12,29 @@ import gym_hyperplanes.optimizer.params as pm
 from gym_hyperplanes.classifiers.hyperplanes_classifier import DeepHyperplanesClassifier
 from gym_hyperplanes.states.state_calc import make_area
 
+BUDGETING_MODE_ADDITION = 1
+BUDGETING_MODE_ABSOLUTE = 2
+
+
+class SolutionConstraint:
+    def __init__(self, lower_bounds, upper_bounds, budget, budget_mode=BUDGETING_MODE_ADDITION):
+        self.lower_bounds = lower_bounds
+        self.upper_bounds = upper_bounds
+        self.budget = budget
+        self.budget_mode = budget_mode
+
+    def get_lower_bounds(self):
+        return self.lower_bounds
+
+    def get_upper_bounds(self):
+        return self.upper_bounds
+
+    def get_budget(self):
+        return self.budget
+
+    def get_budget_mode(self):
+        return self.budget_mode
+
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
     """
@@ -43,7 +66,7 @@ def generate_vars_objective(m, features_minimums, features_maximums, point):
     return vars
 
 
-def generate_constraints(m, vars, hyperplane_constraints):
+def generate_constraints(m, vars, hyperplane_constraints, features_minimums, features_maximums, point, budget, mode):
     for hyperplane_constraint in hyperplane_constraints:
         constraint = None
         for i, coefficient in enumerate(hyperplane_constraint.get_coefficients()):
@@ -58,9 +81,27 @@ def generate_constraints(m, vars, hyperplane_constraints):
         m.Equation(constraint)
         # print('Eq:[{}]'.format(constraint))
 
-    # TODO: GENADI - I think we don't need this any more - should check!!!!
-    for var in vars:
-        constraint = var >= 0
+    for i, var in enumerate(vars):
+        constraint = var >= features_minimums[i]
+        m.Equation(constraint)
+        constraint = var <= features_maximums[i]
+        m.Equation(constraint)
+        # print('Eq:[{}]'.format(constraint)
+
+    if budget is not None:
+        constraint = None
+        for i, var in enumerate(vars):
+            if mode == BUDGETING_MODE_ABSOLUTE:
+                if constraint is None:
+                    constraint = m.abs(vars[i] - point[i])
+                else:
+                    constraint = constraint + m.abs(vars[i] - point[i])
+            else:
+                if constraint is None:
+                    constraint = vars[i] - point[i]
+                else:
+                    constraint = constraint + vars[i] - point[i]
+        constraint = constraint <= budget
         m.Equation(constraint)
         # print('Eq:[{}]'.format(constraint))
 
@@ -117,7 +158,7 @@ def stretched(touch_point, dataset_provider, hp_state, powers, class_area):
     return calculate_destination(touch_point, the_closest_point, -pm.FEATURE_BOUND_STRETCH_RATIO)
 
 
-def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
+def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider, solution_constraint):
     pm.load_params()
     try:
         m = GEKKO(remote=False)  # Initialize gekko
@@ -125,12 +166,17 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
         # we may want to narrow the boundaries of features to make search more close to the real world
         if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
             features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
-            vars = generate_vars_objective(m, features_bounds[0], features_bounds[1], point)
+            features_mins, features_maxs = features_bounds[0].copy(), features_bounds[1].copy()
         else:
-            vars = generate_vars_objective(m, hp_state.get_features_minimums(),
-                                           hp_state.get_features_maximums(), point)
+            features_mins, features_maxs = hp_state.get_features_minimums().copy(), hp_state.get_features_maximums().copy()
+        features_mins, features_maxs = rebuild_vars_bounds(features_mins, features_maxs, solution_constraint)
+        if features_mins is None:
+            return None, None
+        vars = generate_vars_objective(m, features_mins, features_maxs, point)
 
-        generate_constraints(m, vars, constraints_set.get_constraints())
+        generate_constraints(m, vars, constraints_set.get_constraints(), features_mins, features_maxs, point,
+                             None if solution_constraint is None else solution_constraint.get_budget(),
+                             None if solution_constraint is None else solution_constraint.get_budget_mode())
         sys.stdout = open(os.devnull, "w")
         m.solve(disp=False)  # Solve
         sys.stdout = sys.__stdout__
@@ -169,13 +215,31 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider):
         return None, None
 
 
+def rebuild_vars_bounds(features_minimums, features_maximums, solution_constraint):
+    if solution_constraint is not None and solution_constraint.get_lower_bounds() is not None:
+        for i, min in enumerate(features_minimums):
+            low_bound = solution_constraint.get_lower_bounds()[i]
+            if low_bound is not None and low_bound > min:
+                features_minimums[i] = low_bound
+    if solution_constraint is not None and solution_constraint.get_upper_bounds() is not None:
+        for i, max in enumerate(features_maximums):
+            high_bound = solution_constraint.get_upper_bounds()[i]
+            if high_bound is not None and high_bound < max:
+                features_maximums[i] = high_bound
+
+    for i, min in enumerate(features_minimums):
+        if min >= features_maximums[i]:
+            return None, None
+    return features_minimums, features_maximums
+
+
 WORKERS = os.cpu_count()
 # WORKERS = math.ceil(WORKERS * 0.8)
 
 pool_executor = concurrent.futures.ProcessPoolExecutor(max_workers=WORKERS)
 
 
-def find_closest_point(point, required_class, hp_states, dataset_provider=None):
+def find_closest_point(point, required_class, hp_states, dataset_provider=None, solution_constraint=None):
     classifier = DeepHyperplanesClassifier(hp_states)
     # just in case - point can already be of the requested class, let's check this
     y = classifier.predict(np.array([point]), required_class)
@@ -196,7 +260,8 @@ def find_closest_point(point, required_class, hp_states, dataset_provider=None):
         if len(constraints_sets) > 0:
             for constraints_set in constraints_sets:
                 closest_points.append(
-                    pool_executor.submit(closest_to_area, point, powers, hp_state, constraints_set, dataset_provider))
+                    pool_executor.submit(closest_to_area, point, powers, hp_state, constraints_set,
+                                         dataset_provider, solution_constraint))
     print('Submitted overall for search {} areas'.format(len(closest_points)))
 
     # collecting results of searches executed in processes in parallel

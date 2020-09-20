@@ -8,6 +8,7 @@ INSTANCES = None
 TRAIN_SET = None
 PENETRATION_DELTA = None
 SOURCE_MODEL_FILE = None
+CONSTRAINTS_FILE = None
 
 FEATURE_BOUND_AREA = 'AREA'
 FEATURE_BOUND_FEATURES = 'FEATURES'
@@ -34,6 +35,7 @@ def load_params():
     global PENETRATION_DELTA
     global FEATURE_BOUND
     global SOURCE_MODEL_FILE
+    global CONSTRAINTS_FILE
 
     parser = ArgumentParser()
     parser.add_argument("-f", "--file", dest="file", help="Data file path")
@@ -44,6 +46,8 @@ def load_params():
     parser.add_argument("-p", "--penetration_delta", dest="penetration_delta", help="Penetration Delta")
     parser.add_argument("-b", "--feature_bound", dest="feature_bound", default='AREA', help="Features bound")
     parser.add_argument("-m", "--source_model", dest="source_model", default=None, help="Source Model File")
+    parser.add_argument("-g", "--constraints", dest="constraints", default=None,
+                        help="File with features bounds and budget configuration")
     args = parser.parse_args()
     MODEL_FILE = args.file
     REQUIRED_CLASS = args.required_class
@@ -52,6 +56,7 @@ def load_params():
     PENETRATION_DELTA = float(args.penetration_delta) if args.penetration_delta is not None else None
     FEATURE_BOUND = args.feature_bound
     SOURCE_MODEL_FILE = args.source_model
+    CONSTRAINTS_FILE = args.constraints
     if args.configuration is not None:
         logging.info('^^^^^ Loading from config {}'.format(args.configuration))
         config = ConfigParser()
@@ -84,3 +89,4 @@ def load_params():
     logging.info('PENETRATION_DELTA {}'.format(PENETRATION_DELTA))
     logging.info('FEATURE_BOUND {}'.format(FEATURE_BOUND))
     logging.info('SOURCE_MODEL_FILE {}'.format(SOURCE_MODEL_FILE))
+    logging.info('CONSTRAINTS_FILE {}'.format(CONSTRAINTS_FILE))
