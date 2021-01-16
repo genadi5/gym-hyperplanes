@@ -16,11 +16,28 @@ BUDGETING_MODE_ADDITION = 1
 BUDGETING_MODE_ABSOLUTE = 2
 
 
+class ConstraintRelation:
+    def __init__(self, left, sign, right):
+        self.left = left
+        self.sign = sign
+        self.right = right
+
+    def get_left(self):
+        return self.left
+
+    def get_right(self):
+        return self.right
+
+    def get_sign(self):
+        return self.sign
+
+
 class SolutionConstraint:
-    def __init__(self, lower_bounds, upper_bounds, budget, budget_mode=BUDGETING_MODE_ADDITION):
+    def __init__(self, lower_bounds, upper_bounds, budget, relations, budget_mode=BUDGETING_MODE_ADDITION):
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
         self.budget = budget
+        self.relations = relations
         self.budget_mode = budget_mode
 
     def get_lower_bounds(self):
@@ -34,6 +51,9 @@ class SolutionConstraint:
 
     def get_budget_mode(self):
         return self.budget_mode
+
+    def get_relations(self):
+        return self.relations
 
 
 def generate_vars_objective(m, features_minimums, features_maximums, point):
@@ -66,7 +86,8 @@ def generate_vars_objective(m, features_minimums, features_maximums, point):
     return vars
 
 
-def generate_constraints(m, vars, hyperplane_constraints, features_minimums, features_maximums, point, budget, mode):
+def generate_constraints(m, vars, hyperplane_constraints, features_minimums, features_maximums, point, budget, mode,
+                         relations):
     for hyperplane_constraint in hyperplane_constraints:
         constraint = None
         for i, coefficient in enumerate(hyperplane_constraint.get_coefficients()):
@@ -104,6 +125,21 @@ def generate_constraints(m, vars, hyperplane_constraints, features_minimums, fea
         constraint = constraint <= budget
         m.Equation(constraint)
         # print('Eq:[{}]'.format(constraint))
+
+    if relations is not None:
+        constraint = None
+        for relation in relations:
+            if relation.get_sign() == 'EQ':
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] == 0
+            elif relation.get_sign() == 'GR':
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] > 0.6
+            elif relation.get_sign() == 'GE':
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] >= 0
+            elif relation.get_sign() == 'LS':
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] < 0.6
+            elif relation.get_sign() == 'LE':
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] <= 0
+            m.Equation(constraint)
 
 
 def calculate_destination(from_point, to_point, delta):
@@ -167,16 +203,21 @@ def closest_to_area(point, powers, hp_state, constraints_set, dataset_provider, 
         if pm.FEATURE_BOUND == pm.FEATURE_BOUND_AREA:
             features_bounds = hp_state.get_area_features_bounds(constraints_set.get_class_area())
             features_mins, features_maxs = features_bounds[0].copy(), features_bounds[1].copy()
+            features_mins, features_maxs = rebuild_vars_bounds(features_mins, features_maxs, solution_constraint)
+            if features_mins is None: # if too tied - lets extand to state feature range
+                features_mins, features_maxs = hp_state.get_features_minimums().copy(), hp_state.get_features_maximums().copy()
+                features_mins, features_maxs = rebuild_vars_bounds(features_mins, features_maxs, solution_constraint)
         else:
             features_mins, features_maxs = hp_state.get_features_minimums().copy(), hp_state.get_features_maximums().copy()
-        features_mins, features_maxs = rebuild_vars_bounds(features_mins, features_maxs, solution_constraint)
+            features_mins, features_maxs = rebuild_vars_bounds(features_mins, features_maxs, solution_constraint)
         if features_mins is None:
             return None, None
         vars = generate_vars_objective(m, features_mins, features_maxs, point)
 
         generate_constraints(m, vars, constraints_set.get_constraints(), features_mins, features_maxs, point,
                              None if solution_constraint is None else solution_constraint.get_budget(),
-                             None if solution_constraint is None else solution_constraint.get_budget_mode())
+                             None if solution_constraint is None else solution_constraint.get_budget_mode(),
+                             None if solution_constraint is None else solution_constraint.get_relations())
         sys.stdout = open(os.devnull, "w")
         m.solve(disp=False)  # Solve
         sys.stdout = sys.__stdout__
