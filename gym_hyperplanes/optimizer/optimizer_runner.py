@@ -84,12 +84,12 @@ def execute():
 
     start = time.time()
     for i, instance in enumerate(instances):
-        formatted_instance = [int(i) for i in instance] if is_int else [float(i) for i in instance]
+        formatted_instance = [round(i) for i in instance] if is_int else [round(i) for i in instance]
         print('>>>>> #{}/#{} at time {} instance {}'.format((i + 1), len(instance), (time.time() - start),
                                                             formatted_instance))
         start_instance = time.time()
         result, constraints = mb.find_closest_point(instance, required_class, hp_states, dataset, solution_constraints)
-        formatted_result = None if result is None else [int(i) for i in result[0]] if is_int else [float(i) for i in
+        formatted_result = None if result is None else [round(i) for i in result[0]] if is_int else [round(i) for i in
                                                                                                    result[0]]
         print('>>>>> #{}/#{} at time {} result   {}'.format((i + 1), len(instances), (time.time() - start), formatted_result))
         if constraints is None:

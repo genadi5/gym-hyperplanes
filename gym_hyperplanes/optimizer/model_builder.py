@@ -132,11 +132,11 @@ def generate_constraints(m, vars, hyperplane_constraints, features_minimums, fea
             if relation.get_sign() == 'EQ':
                 constraint = vars[relation.get_left()] - vars[relation.get_right()] == 0
             elif relation.get_sign() == 'GR':
-                constraint = vars[relation.get_left()] - vars[relation.get_right()] > 0.6
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] > 0.9
             elif relation.get_sign() == 'GE':
                 constraint = vars[relation.get_left()] - vars[relation.get_right()] >= 0
             elif relation.get_sign() == 'LS':
-                constraint = vars[relation.get_left()] - vars[relation.get_right()] < 0.6
+                constraint = vars[relation.get_left()] - vars[relation.get_right()] < 0.9
             elif relation.get_sign() == 'LE':
                 constraint = vars[relation.get_left()] - vars[relation.get_right()] <= 0
             m.Equation(constraint)
